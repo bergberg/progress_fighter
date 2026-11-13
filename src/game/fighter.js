@@ -879,7 +879,8 @@ export class Fighter {
     const pose = this.animator.pose;
     rig.applyPose(pose, this.grounded && !this.moveScriptedY ? this.animator.ground : this.animator.ground * (this.y < 0.3 ? 1 - this.y / 0.3 : 0));
     // yaw
-    const target = this.facing > 0 ? -OPEN_YAW : Math.PI + OPEN_YAW;
+    const open = this.state === 'victory' ? 1.15 : OPEN_YAW; // winners turn to the camera
+    const target = this.facing > 0 ? -open : Math.PI + open;
     let d = target - this.yaw;
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;

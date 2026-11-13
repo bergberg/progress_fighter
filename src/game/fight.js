@@ -843,8 +843,8 @@ export class Fight {
       const mid = (a.x + b.x) / 2;
       const sep = Math.abs(a.x - b.x);
       const top = Math.max(a.y, b.y);
-      const wide = clamp(sep + 3.4, 5.6, 16) / Math.min(1.78, Math.max(0.9, aspect)) * 1.78;
-      tz = clamp(wide * 0.92 + top * 0.95, 7.2, 17) - this.camKick;
+      const wide = clamp(sep + 3.4, 5.6, 16) / Math.min(1.78, Math.max(0.5, aspect)) * 1.78;
+      tz = clamp(wide * 0.92 + top * 0.95, 7.2, aspect < 1 ? 30 : 17) - this.camKick;
       tx = clamp(mid, -5.4, 5.4);
       ty = 1.75 + top * 0.4;
       lx = clamp(mid, -5.8, 5.8);

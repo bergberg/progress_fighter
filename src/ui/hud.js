@@ -33,12 +33,12 @@ export class HUD {
       <div class="touch hidden">
         <div class="stick"><div class="stick-knob"></div></div>
         <div class="tbtns">
-          <button data-a="overdrive" class="tb od">OD</button>
-          <button data-a="block" class="tb blk">BLOCK</button>
-          <button data-a="dash" class="tb dsh">DASH</button>
-          <button data-a="special" class="tb sp">SP</button>
-          <button data-a="heavy" class="tb hv">H</button>
-          <button data-a="light" class="tb lt">L</button>
+          <button data-a="overdrive" class="tb t-od">OD</button>
+          <button data-a="block" class="tb t-blk">BLOCK</button>
+          <button data-a="dash" class="tb t-dsh">DASH</button>
+          <button data-a="special" class="tb t-sp">SP</button>
+          <button data-a="heavy" class="tb t-hv">H</button>
+          <button data-a="light" class="tb t-lt">L</button>
         </div>
         <button class="tpause" data-pause="1">II</button>
       </div>`;

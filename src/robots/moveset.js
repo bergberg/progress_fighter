@@ -176,7 +176,7 @@ function vanguard(d) {
     [1.75, cleave],
     [2.1, st],
   ]);
-  A.victory = clip([[0, st], [0.5, P(st, { hips: [2, 0, -30], chest: [6, 0, -30], head: [-6, 0, 30], armR: [176, 4], foreR: 4, armL: [20, 20], foreL: 110, thighL: [16, 8], shinL: -14, thighR: [-10, 8], shinR: -14 }), 'out3'], [3, P(st, { hips: [2, 0, -30], chest: [6, 0, -30], head: [-6, 0, 30], armR: [176, 4], foreR: 4, armL: [20, 20], foreL: 110, thighL: [16, 8], shinL: -14, thighR: [-10, 8], shinR: -14 })]]);
+  A.victory = clip([[0, st], [0.5, P(st, { hips: [2, 0, 0], chest: [6, 0, 0], head: [-10, 0, 0], armR: [172, 14], foreR: 4, armL: [14, 26], foreL: 96, thighL: [16, 8], shinL: -14, thighR: [-10, 8], shinR: -14 }), 'out3'], [3, P(st, { hips: [2, 0, 0], chest: [6, 0, 0], head: [-10, 0, 0], armR: [172, 14], foreR: 4, armL: [14, 26], foreL: 96, thighL: [16, 8], shinL: -14, thighR: [-10, 8], shinR: -14 })]]);
 
   const tR = [{ which: 'R' }];
   const M = {};

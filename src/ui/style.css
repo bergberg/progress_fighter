@@ -137,7 +137,7 @@ kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1
 .tbtns { position: absolute; right: max(3vw, 12px); bottom: max(9vh, 60px); display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; pointer-events: auto; }
 .tb { width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(10, 14, 20, 0.55); font: 800 13px var(--display); text-align: center; touch-action: none; }
 .tb.on { background: rgba(57, 213, 255, 0.5); transform: scale(0.94); }
-.tb.lt { border-color: #7dff5a; } .tb.hv { border-color: #ff8a3c; } .tb.sp { border-color: #c56bff; } .tb.od { border-color: var(--gold); color: var(--gold); } .tb.blk { border-color: #39d5ff; font-size: 10px; } .tb.dsh { font-size: 10px; }
+.tb.t-lt { border-color: #7dff5a; } .tb.t-hv { border-color: #ff8a3c; } .tb.t-sp { border-color: #c56bff; } .tb.t-od { border-color: var(--gold); color: var(--gold); } .tb.t-blk { border-color: #39d5ff; font-size: 10px; } .tb.t-dsh { font-size: 10px; }
 .tpause { position: absolute; top: max(11vh, 70px); left: 50%; transform: translateX(-50%); width: 40px; height: 34px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(10, 14, 20, 0.5); font: 800 12px var(--display); text-align: center; pointer-events: auto; }
 
 /* =============================================================== MENUS */
@@ -300,7 +300,7 @@ kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1
 .brief { position: absolute; right: 1.6vw; bottom: 2vh; width: min(380px, 28vw); padding: 16px; border-top: 3px solid var(--sc); max-height: calc(100vh - 90px); overflow-y: auto; }
 .brief-head span { font: 700 10px var(--display); letter-spacing: 0.4em; color: var(--sc); }
 .brief-head h2 { margin: 2px 0 10px; font: 900 italic clamp(20px, 2.1vw, 30px) var(--display); }
-.brief small, .res-grid small, .res-drop small { display: block; font: 700 9px var(--display); letter-spacing: 0.3em; color: var(--dim); margin-bottom: 2px; }
+.brief small, .res-grid small, .res-drop small { display: block; font: 700 9px var(--display); letter-spacing: 0.18em; white-space: nowrap; color: var(--dim); margin-bottom: 2px; }
 .brief-enemy b { font: 900 italic clamp(18px, 1.8vw, 26px) var(--display); color: #ffb0a0; text-shadow: 0 0 16px rgba(255, 74, 58, 0.5); }
 .brief-enemy span { display: block; font-size: 13px; color: var(--dim); font-weight: 600; }
 .brief-text { font-size: 14px; line-height: 1.35; color: #b9c6d8; margin: 10px 0; font-weight: 500; }
@@ -431,6 +431,10 @@ kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1
   .hints { display: none; }
   .movename { bottom: 34vh; }
   .od { bottom: auto; top: clamp(70px, 12vh, 110px); width: 34vw; }
+}
+@media (max-width: 600px) {
+  .c-map { grid-template-columns: 1fr; }
+  .pl-lv { display: none; }
 }
 @media (max-height: 520px) {
   .stick { bottom: 16px; width: 110px; height: 110px; }

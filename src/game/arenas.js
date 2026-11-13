@@ -1036,7 +1036,7 @@ function hangar(R) {
   top.position.y = 0.24;
   top.receiveShadow = true;
   table.add(top);
-  const ringMat = glowMat(0x4ac8ff, 2.6);
+  const ringMat = glowMat(0x4ac8ff, 1.5);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(2.58, 0.035, 6, 96), ringMat);
   ring.rotation.x = Math.PI / 2;
   ring.position.y = 0.25;
@@ -1054,14 +1054,37 @@ function hangar(R) {
   table.add(ticks);
   A.table = table;
   A.tableTop = 0.27;
-  A.accent = (c) => ringMat.color.set(c).multiplyScalar(2.6);
+  A.accent = (c) => ringMat.color.set(c).multiplyScalar(1.5);
   // back wall with light bars
   const wall = new THREE.Mesh(new THREE.BoxGeometry(70, 26, 1), std(0x12161b, 0.7, 0.6));
   wall.position.set(0, 12, -13);
   s.add(wall);
-  const bars = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 9, 0.1), glowMat(0x9fd0ff, 1.6), 14);
-  for (let i = 0; i < 14; i++) { m4.makeTranslation(-26 + i * 4, 6, -12.4); bars.setMatrixAt(i, m4); }
+  const bars = new THREE.InstancedMesh(new THREE.BoxGeometry(0.07, 7.5, 0.08), glowMat(0x4a9cff, 1.25), 28);
+  for (let i = 0; i < 28; i++) { m4.makeTranslation(-27 + i * 2 + (i % 2 ? 0.26 : 0), 5.4 + (i % 2 ? 0.8 : 0), -12.4); bars.setMatrixAt(i, m4); }
   s.add(bars);
+  // horizontal wall banding + status panels
+  const bands = new THREE.InstancedMesh(new THREE.BoxGeometry(70, 0.16, 0.2), dark, 6);
+  for (let i = 0; i < 6; i++) { m4.makeTranslation(0, 1.4 + i * 2.1, -12.35); bands.setMatrixAt(i, m4); }
+  s.add(bands);
+  const panelMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: `precision highp float; uniform float uTime; varying vec2 vUv; ${NOISE}
+      void main(){
+        vec2 g = vec2(vUv.x * 18.0, vUv.y * 10.0); vec2 gi = floor(g); vec2 gf = fract(g);
+        float cell = step(0.45, hash21(gi + floor(uTime * 0.6 + gi.y * 0.3))) * step(0.12, gf.x) * step(gf.x, 0.88) * step(0.3, gf.y) * step(gf.y, 0.7);
+        float bar = step(vUv.x, 0.35 + 0.3 * sin(uTime * 0.7 + floor(vUv.y * 5.0))) * step(0.4, fract(vUv.y * 5.0)) * step(vUv.y, 0.4);
+        float frame = step(vUv.x, 0.012) + step(0.988, vUv.x) + step(vUv.y, 0.03) + step(0.97, vUv.y);
+        float a = (cell * 0.5 * step(0.45, vUv.y) + bar * 0.7 + frame + 0.04) * (0.8 + 0.2 * sin(vUv.y * 160.0 + uTime * 4.0));
+        gl_FragColor = vec4(vec3(0.25, 0.62, 1.0) * a * 0.9, a);
+      }`,
+  });
+  for (const [x, y, w, h] of [[-8.6, 6.6, 4.4, 2.6], [8.6, 6.6, 4.4, 2.6], [-15, 4.2, 3.2, 4.2], [15, 4.2, 3.2, 4.2]]) {
+    const pm = new THREE.Mesh(new THREE.PlaneGeometry(w, h), panelMat);
+    pm.position.set(x, y, -11.3);
+    s.add(pm);
+  }
+  A.updaters.push((dt, t) => (panelMat.uniforms.uTime.value = t));
   const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, 26, 1.6), dark, 8);
   for (let i = 0; i < 8; i++) { m4.makeTranslation(-28 + i * 8, 12, -12.2); ribs.setMatrixAt(i, m4); }
   s.add(ribs);
