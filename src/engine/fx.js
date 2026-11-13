@@ -582,8 +582,8 @@ export class FX {
             float body = pow(max(0.0, 1.0 - wv), 2.0) * (0.45 + n * 1.1);
             float fil = pow(max(0.0, 1.0 - abs(wv - 0.55 - n2 * 0.3) * 6.0), 2.0) * 0.7;
             float caps = smoothstep(0.0, 0.03, u) * smoothstep(1.0, 0.92, u);
-            float a = (core * 2.4 + body + fil) * caps * open;
-            vec3 col = mix(uColor * 1.5, vec3(1.0), core);
+            float a = (core * 1.5 + body + fil) * caps * open;
+            vec3 col = mix(uColor * 1.5, vec3(1.0), core * 0.7);
             gl_FragColor = vec4(col * a, a);
           }`,
       });
@@ -658,7 +658,7 @@ export class FX {
             float fadeY = smoothstep(1.0, 0.25, vUv.y) * smoothstep(0.0, 0.03, vUv.y);
             float a = (0.25 + streak) * pow(f, 0.8) * fadeY * sin(clamp(uT, 0.0, 1.0) * 3.14159);
             vec3 col = mix(uColor, vec3(1.0), streak * 0.35 * f);
-            gl_FragColor = vec4(col * a * 1.6, a);
+            gl_FragColor = vec4(col * a * 1.2, a);
           }`,
       });
       const mesh = new THREE.Mesh(pilGeo, mat);
@@ -773,7 +773,7 @@ export class FX {
 
   flare(pos, o = {}) {
     this.add.spawn(pos.x, pos.y, (pos.z || 0) + 0.3, 0, 0, 0, {
-      color: o.color ?? 0xffffff, intensity: o.intensity ?? 2.5, life: o.life ?? 0.16, size: o.size ?? 2.2, size1: (o.size ?? 2.2) * 0.3,
+      color: o.color ?? 0xffffff, intensity: o.intensity ?? 1.5, life: o.life ?? 0.16, size: o.size ?? 2.2, size1: (o.size ?? 2.2) * 0.3,
       kind: PK.FLARE, rot: o.rot ?? rand(-0.5, 0.5), rotVel: o.rotVel ?? rand(-2, 2),
     });
   }
@@ -831,7 +831,7 @@ export class FX {
     r.life = r.dur = o.dur ?? 0.4;
     r.r0 = o.r0 ?? 0.2;
     r.r1 = o.r1 ?? 2.5;
-    r.mat.uniforms.uColor.value.set(o.color ?? 0xffffff).multiplyScalar(o.intensity ?? 1.6);
+    r.mat.uniforms.uColor.value.set(o.color ?? 0xffffff).multiplyScalar(o.intensity ?? 1.0);
     r.mat.uniforms.uWidth.value = o.width ?? 0.12;
     r.mat.uniforms.uAlpha.value = o.alpha ?? 1;
     r.mat.uniforms.uFill.value = o.fill ?? 0;
@@ -849,11 +849,11 @@ export class FX {
   light(pos, color, intensity = 30, dur = 0.25, dist = 11) {
     const l = this.lights.get();
     l.life = l.dur = dur;
-    l.peak = intensity;
+    l.peak = intensity * 0.4;
     l.light.color.set(color);
     l.light.distance = dist;
     l.light.position.set(pos.x, pos.y, (pos.z || 0) + 1.2);
-    l.light.intensity = intensity;
+    l.light.intensity = l.peak;
     return l;
   }
 
@@ -865,7 +865,7 @@ export class FX {
     L.jit = o.jitter ?? 0.35;
     L.width = o.width ?? 0.12;
     L.regen = 0;
-    L.mat.uniforms.uColor.value.set(o.color ?? 0x9fd8ff).multiplyScalar(o.intensity ?? 1.5);
+    L.mat.uniforms.uColor.value.set(o.color ?? 0x9fd8ff).multiplyScalar(o.intensity ?? 1.1);
     L.mesh.visible = true;
     this._regenBolt(L);
     const br = o.branches ?? 0;
@@ -920,7 +920,7 @@ export class FX {
     B.mesh.position.set(a.x, a.y, a.z || 0);
     B.mesh.rotation.set(0, 0, Math.atan2(dy, dx));
     B.mesh.scale.set(len, o.width ?? 0.6, 1);
-    B.mat.uniforms.uColor.value.set(o.color ?? 0x88ddff).multiplyScalar(o.intensity ?? 1.6);
+    B.mat.uniforms.uColor.value.set(o.color ?? 0x88ddff).multiplyScalar(o.intensity ?? 0.9);
     B.mat.uniforms.uLen.value = len;
     B.mesh.visible = true;
     return B;
@@ -935,8 +935,8 @@ export class FX {
     A.life = A.dur = o.dur ?? 0.22;
     A.hold = false;
     const u = A.mat.uniforms;
-    u.uColor.value.set(o.color ?? 0xffffff).multiplyScalar(o.intensity ?? 1.8);
-    u.uColor2.value.set(o.color2 ?? o.color ?? 0xffffff).multiplyScalar((o.intensity ?? 1.8) * 0.5);
+    u.uColor.value.set(o.color ?? 0xffffff).multiplyScalar(o.intensity ?? 1.25);
+    u.uColor2.value.set(o.color2 ?? o.color ?? 0xffffff).multiplyScalar((o.intensity ?? 1.25) * 0.55);
     let a0 = o.a0 ?? -1, a1 = o.a1 ?? 1;
     u.uA0.value = a0; u.uA1.value = a1;
     u.uThick.value = o.thick ?? 0.32;
@@ -958,7 +958,7 @@ export class FX {
     p.life = p.dur = o.dur ?? 0.5;
     p.w = o.width ?? 0.8;
     p.h = o.height ?? 7;
-    p.mat.uniforms.uColor.value.set(o.color ?? 0x88ddff).multiplyScalar(o.intensity ?? 1.5);
+    p.mat.uniforms.uColor.value.set(o.color ?? 0x88ddff).multiplyScalar(o.intensity ?? 0.8);
     p.mat.uniforms.uSeed.value = Math.random() * 20;
     p.mesh.position.set(x, o.y ?? 0, o.z ?? 0);
     p.mesh.visible = true;
@@ -970,7 +970,7 @@ export class FX {
     d.life = d.dur = o.dur ?? 0.5;
     d.r0 = o.r0 ?? 0.3;
     d.r1 = o.r1 ?? 3;
-    d.mat.uniforms.uColor.value.set(o.color ?? 0x66ccff).multiplyScalar(o.intensity ?? 1.4);
+    d.mat.uniforms.uColor.value.set(o.color ?? 0x66ccff).multiplyScalar(o.intensity ?? 1.0);
     d.mesh.position.set(pos.x, pos.y ?? 0, pos.z || 0);
     d.mesh.visible = true;
     return d;
@@ -1011,12 +1011,12 @@ export class FX {
   /** Generic strike impact. power 0..1.5 */
   impact(pos, color, power = 0.5, dirX = 1) {
     const p = Math.max(0.2, power);
-    this.flare(pos, { color, size: 1.6 + p * 2.6, life: 0.1 + p * 0.08, intensity: 2.5 });
-    this.glow(pos, { color, size: 0.8 + p * 1.6, life: 0.14, intensity: 2 });
+    this.flare(pos, { color, size: 1.3 + p * 2.0, life: 0.1 + p * 0.08, intensity: 1.7 });
+    this.glow(pos, { color, size: 0.7 + p * 1.3, life: 0.14, intensity: 1.1 });
     this.ring(pos, { color, r0: 0.15, r1: 0.9 + p * 1.9, dur: 0.22 + p * 0.14, width: 0.16, tiltY: 0.9 * dirX });
     this.sparks(pos, { count: 8 + p * 22, color: 0xfff0c8, color2: color, speed: 6 + p * 9, dir: [dirX * 0.9, 0.35, 0], spread: 0.9, size: 0.03 + p * 0.02 });
     this.sparks(pos, { count: 4 + p * 8, color: 0xffb060, color2: 0xff4a10, speed: 3 + p * 3, gravity: 12, life: 0.8, size: 0.025 });
-    this.light(pos, color, 25 + p * 55, 0.18 + p * 0.1);
+    this.light(pos, color, 16 + p * 34, 0.18 + p * 0.1);
     if (p > 0.75) {
       this.ring(pos, { color: 0xffffff, r0: 0.3, r1: 2.6 + p * 1.6, dur: 0.3, width: 0.05, rot: rand(TAU) });
       this.smoke(pos, { count: 3, size: 0.5, alpha: 0.25, speed: 2 });
@@ -1031,30 +1031,30 @@ export class FX {
   }
 
   parryBurst(pos, color, dirX = 1) {
-    this.flare(pos, { color: 0xffffff, size: 6, life: 0.22, intensity: 3.5 });
-    this.ring(pos, { color, r0: 0.2, r1: 4.2, dur: 0.45, width: 0.2 });
-    this.ring(pos, { color: 0xffffff, r0: 0.2, r1: 6.5, dur: 0.55, width: 0.04 });
+    this.flare(pos, { color, size: 3.6, life: 0.2, intensity: 1.8 });
+    this.ring(pos, { color, r0: 0.2, r1: 3.6, dur: 0.45, width: 0.16, intensity: 1.2 });
+    this.ring(pos, { color: 0xffffff, r0: 0.2, r1: 5.5, dur: 0.55, width: 0.035, intensity: 0.9 });
     this.hexShards(pos, { color, count: 26, speed: 9, dir: dirX });
-    this.sparks(pos, { count: 36, color: 0xffffff, color2: color, speed: 14, gravity: 2, size: 0.045, life: 0.6 });
-    this.light(pos, color, 120, 0.35, 16);
+    this.sparks(pos, { count: 30, color: 0xffffff, color2: color, speed: 13, gravity: 2, size: 0.04, life: 0.6, intensity: 2 });
+    this.light(pos, color, 55, 0.3, 14);
   }
 
   guardBreak(pos, dirX = 1) {
-    this.flare(pos, { color: 0xff6a4a, size: 5, life: 0.2, intensity: 3 });
+    this.flare(pos, { color: 0xff6a4a, size: 3.6, life: 0.2, intensity: 1.8 });
     this.ring(pos, { color: 0xff3b2f, r0: 0.2, r1: 3.6, dur: 0.4, width: 0.22 });
     this.hexShards(pos, { color: 0xff4030, count: 34, speed: 8, dir: -dirX, size: 0.13 });
     this.sparks(pos, { count: 30, color: 0xffd0a0, color2: 0xff2a10, speed: 10, size: 0.04 });
-    this.light(pos, 0xff4030, 90, 0.3, 14);
+    this.light(pos, 0xff4030, 50, 0.3, 14);
   }
 
   explosion(pos, color, scale = 1) {
-    this.flare(pos, { color: 0xffffff, size: 5 * scale, life: 0.2, intensity: 3.5 });
-    this.glow(pos, { color, size: 2.4 * scale, size1: 5 * scale, life: 0.3, intensity: 2.5 });
+    this.flare(pos, { color: 0xffffff, size: 4 * scale, life: 0.2, intensity: 2.2 });
+    this.glow(pos, { color, size: 2.2 * scale, size1: 4.5 * scale, life: 0.3, intensity: 1.4 });
     this.ring(pos, { color, r0: 0.3, r1: 4.2 * scale, dur: 0.45, width: 0.2, fill: 0.6 });
     this.ring(pos, { color: 0xffffff, r0: 0.3, r1: 5.6 * scale, dur: 0.5, width: 0.05, rot: rand(TAU), tiltX: 1.1 });
     this.sparks(pos, { count: 50 * scale, color: 0xffffff, color2: color, speed: 15 * scale, size: 0.05, life: 0.8, gravity: 6 });
     this.smoke(pos, { count: 10, size: 0.9 * scale, speed: 3 * scale, alpha: 0.4, life: 1.2 });
-    this.light(pos, color, 160 * scale, 0.4, 18);
+    this.light(pos, color, 80 * scale, 0.4, 18);
   }
 
   groundSlam(x, color, scale = 1) {
@@ -1072,7 +1072,7 @@ export class FX {
         color: 0x1c1c20, color2: 0x1c1c20, life: rand(0.7, 1.3), size: rand(0.05, 0.14), size1: 0.05, kind: PK.SHARD, gravity: 20, alpha: 1, rotVel: rand(-12, 12), floor: true,
       });
     }
-    this.light({ x, y: 0.6, z: 0 }, color, 110 * scale, 0.35, 16);
+    this.light({ x, y: 0.6, z: 0 }, color, 55 * scale, 0.35, 16);
   }
 
   // -------------------------------------------------------------------------

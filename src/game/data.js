@@ -189,7 +189,7 @@ export const SECTORS = [
       stage('1-1', 'First Blood', E('RUSTBUCKET', 'vanguard', 1, { primary: 0x6b4a32, secondary: 0x3a3a3a, glow: 0xffb040, trim: 0x55504a }, []), { rounds: 1, intro: 'A salvage-rig duelist held together by spite. Learn the basics.' }),
       stage('1-2', 'Quick Hands', E('FLICKER', 'wraith', 2, { primary: 0x3a4a3a, secondary: 0x151a15, glow: 0xa0ff50, trim: 0x707a70 }, ['legs_sprint']), { intro: 'Fast and fragile. Block the flurry, punish the gap.' }),
       stage('1-3', 'Live Wire', E('STATIC', 'tempest', 3, { primary: 0x8a8f96, secondary: 0x33363c, glow: 0xffe14a, trim: 0x55585e }, ['core_overclock']), { intro: 'Keeps you at arm\'s length. Dash through the gaps.' }),
-      stage('1-4', 'King of the Pit', E('GRINDER', 'bastion', 4, { primary: 0x35383d, secondary: 0x1a1b1e, glow: 0xff3b1f, trim: 0xb08a3c }, ['arms_tungsten', 'plating_reinforced'], { boss: true }), { boss: true, drop: 'arms_thermal', intro: 'The pit champion. He has crushed forty frames. Do not trade heavy blows.' }),
+      stage('1-4', 'King of the Pit', E('GRINDER', 'bastion', 4, { primary: 0x35383d, secondary: 0x1a1b1e, glow: 0xff3b1f, trim: 0xb08a3c }, ['arms_tungsten'], { boss: true }), { boss: true, drop: 'arms_thermal', intro: 'The pit champion. He has crushed forty frames. Do not trade heavy blows.' }),
     ],
   },
   {

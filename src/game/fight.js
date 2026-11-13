@@ -333,12 +333,12 @@ export class Fight {
     this.cine = { f, t: dur, dur };
     this.hud.letterbox(true);
     this.sfx('overdrive');
-    this.R.flash(f.color, 0.35);
+    this.R.flash(f.color, 0.14);
     this.R.kickAberration(0.02);
     this.R.setDesat(0.55);
     this.fx.ring(v3(f.x, f.y + 1.2), { color: f.color, r0: 0.3, r1: 7, dur: 0.6, width: 0.08 });
-    this.fx.flare(v3(f.x, f.y + 1.3), { color: 0xffffff, size: 6, life: 0.25 });
-    f.glowBoost = 4;
+    this.fx.flare(v3(f.x, f.y + 1.3), { color: f.color, size: 4, life: 0.25 });
+    f.glowBoost = 2.5;
   }
 
   pull(f, strength, dt) {
@@ -422,7 +422,7 @@ export class Fight {
       this.camKick = Math.max(this.camKick, lvl * 0.14);
       if (lvl >= 3 || res.crit) {
         const sp = this.project(pos);
-        this.R.kickRadial(0.02 + (res.crit ? 0.02 : 0), sp.x, sp.y);
+        this.R.kickRadial(0.012 + (res.crit ? 0.012 : 0), sp.x, sp.y);
       }
       if ((o.charged || (res.crit && lvl >= 2)) && !res.ko) this.R.impactFrame(0.05, 0x05060a, att.color);
 
@@ -456,8 +456,8 @@ export class Fight {
       this.hitstop = Math.max(this.hitstop, 0.16);
       this.slowmo(0.3, 0.45);
       this.shake(0.5);
-      this.R.flash(def.color, 0.22);
-      this.R.kickAberration(0.02);
+      this.R.flash(def.color, 0.07);
+      this.R.kickAberration(0.014);
       const s2 = this.project(sp);
       this.R.kickRadial(0.045, s2.x, s2.y);
       this.hud.popup('PARRY', sp.x, sp.y + 1.1, 'parry');
@@ -483,9 +483,9 @@ export class Fight {
     this.R.impactFrame(0.13, 0x05060a, att.color);
     this.R.kickAberration(0.04);
     const sp = this.project(pos);
-    this.R.kickRadial(0.09, sp.x, sp.y);
+    this.R.kickRadial(0.06, sp.x, sp.y);
     this.shake(1.3);
-    this.fx.explosion(pos, att.color, 1.1);
+    this.fx.explosion(pos, att.color, 0.9);
     this.fx.sparks(pos, { count: 60, color: 0xffffff, color2: def.color, speed: 16, life: 1.1, size: 0.05 });
     this.camFocus = { f: def, t: 1.6 };
     for (const p of this.projectiles) this.killProjectile(p, true);
@@ -520,7 +520,7 @@ export class Fight {
 
   makeOrb(color, radius) {
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color(color).multiplyScalar(2.2) }, uTime: { value: 0 } },
+      uniforms: { uColor: { value: new THREE.Color(color).multiplyScalar(1.3) }, uTime: { value: 0 } },
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vP;
         void main(){ vP = position; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
@@ -530,7 +530,7 @@ export class Fight {
           float f = abs(dot(normalize(vN), normalize(vV)));
           float bands = sin(vP.y * 22.0 + uTime * 16.0) * sin(vP.x * 17.0 - uTime * 11.0) * sin(vP.z * 19.0 + uTime * 13.0);
           float a = pow(f, 1.5) * 1.3 + pow(1.0 - f, 2.0) * 0.9 + smoothstep(0.35, 0.9, bands) * 1.2;
-          vec3 col = mix(uColor, vec3(1.0), pow(f, 5.0));
+          vec3 col = mix(uColor, vec3(1.0), pow(f, 6.0) * 0.6);
           gl_FragColor = vec4(col * a, a);
         }`,
     });
@@ -592,7 +592,7 @@ export class Fight {
         if (p.fxT <= 0) {
           p.fxT = 0.07;
           this.fx.lightning(v3(p.x, p.y), v3(p.x + rand(-1, 1), p.y + rand(-1, 1)), { color: p.color, dur: 0.09, width: 0.045, jitter: 0.3 });
-          this.fx.glow(v3(p.x, p.y), { color: p.color, size: 1.7, size1: 1.2, life: 0.12, intensity: 0.55 });
+          this.fx.glow(v3(p.x, p.y), { color: p.color, size: 1.3, size1: 0.9, life: 0.12, intensity: 0.22 });
           if (Math.random() < 0.4) this.fx.lightning(v3(p.x, p.y), v3(p.x + rand(-0.6, 0.6), 0), { color: p.color, dur: 0.1, width: 0.04 });
         }
       } else if (p.kind === 'quake') {
@@ -628,7 +628,7 @@ export class Fight {
               p.vis.mat.uniforms.uColor2.value.set(def.color);
               p.vis.facing = -p.vis.facing;
             }
-            if (p.orb) p.orb.mat.uniforms.uColor.value.set(def.color).multiplyScalar(2.2);
+            if (p.orb) p.orb.mat.uniforms.uColor.value.set(def.color).multiplyScalar(1.3);
           } else {
             p.lastHit = p.age;
             p.multi--;
@@ -795,7 +795,7 @@ export class Fight {
       for (let i = 0; i < n; i++) this.step(h);
     }
     const visDt = simDt > 0 ? simDt : dt * 0.02;
-    for (const f of this.fighters) f.applyVisual(visDt, this.simTime);
+    for (const f of this.fighters) f.applyVisual(visDt, this.simTime, dt);
     this.fx.update(simDt > 0 ? simDt : dt * 0.12);
     this.arena.update(dt * (0.3 + 0.7 * this.timeScale), this.realTime, this);
     this.updateCamera(dt);
@@ -844,11 +844,11 @@ export class Fight {
       const sep = Math.abs(a.x - b.x);
       const top = Math.max(a.y, b.y);
       const wide = clamp(sep + 3.4, 5.6, 16) / Math.min(1.78, Math.max(0.9, aspect)) * 1.78;
-      tz = clamp(wide * 0.92 + top * 0.32, 7.2, 15.5) - this.camKick;
+      tz = clamp(wide * 0.92 + top * 0.95, 7.2, 17) - this.camKick;
       tx = clamp(mid, -5.4, 5.4);
-      ty = 1.75 + top * 0.36;
+      ty = 1.75 + top * 0.4;
       lx = clamp(mid, -5.8, 5.8);
-      ly = 1.28 + top * 0.42;
+      ly = 1.28 + top * 0.5;
     }
     this.camKick = damp(this.camKick, 0, 10, dt);
     const k = focus ? 7 : 5.5;
@@ -866,10 +866,6 @@ export class Fight {
     cam.position.set(this.camPos.x + sx + sway, this.camPos.y + sy, this.camPos.z);
     cam.lookAt(this.camLook.x + sx * 0.5, this.camLook.y + sy * 0.5, 0);
     cam.rotation.z += noise1(t + 40) * sh * 0.035;
-  }
-
-  render(dt, frameMs) {
-    this.R.render(dt, frameMs);
   }
 
   setPaused(p) {

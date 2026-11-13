@@ -92,7 +92,7 @@ const FinalShader = {
       vec2 uv = vUv;
       vec2 dir = uv - uCenter;
       float d = length(dir * vec2(uRes.x / uRes.y, 1.0));
-      float ab = uAberration * (0.25 + d * d * 1.6) + 0.0012 * d * d;
+      float ab = uAberration * (0.1 + d * d * 0.6) + 0.001 * d * d;
       vec3 c = vec3(0.0);
       float jitter = hash(uv * uRes + uTime) * 0.2;
       for (int i = 0; i < 6; i++) {
@@ -255,7 +255,8 @@ export class Renderer {
     this.fx.fade = this.fx.fadeTarget = v;
   }
 
-  render(dt, frameMs) {
+  /** advance post-fx animation state and adaptive resolution */
+  update(dt, frameMs) {
     const fx = this.fx;
     this.time += dt;
     fx.aberration = damp(fx.aberration, 0, 9, dt);
@@ -265,18 +266,6 @@ export class Renderer {
     fx.desat = damp(fx.desat, fx.desatTarget, 8, dt);
     const fd = fx.fadeTarget - fx.fade;
     fx.fade += clamp(fd, -fx.fadeSpeed * dt, fx.fadeSpeed * dt);
-
-    const u = this.u;
-    u.uTime.value = this.time;
-    u.uAberration.value = fx.aberration;
-    u.uRadial.value = fx.radial;
-    u.uImpact.value = fx.impact > 0 ? 1 : 0;
-    u.uDesat.value = fx.desat;
-    u.uFlash.value = fx.flash;
-    u.uFade.value = fx.fade;
-
-    this.renderer.info.reset();
-    this.composer.render(dt);
 
     // dynamic resolution: keep the frame pacing smooth
     if (this.dynamicRes && frameMs !== undefined) {
@@ -293,6 +282,20 @@ export class Renderer {
         }
       }
     }
+  }
+
+  render() {
+    const fx = this.fx;
+    const u = this.u;
+    u.uTime.value = this.time;
+    u.uAberration.value = fx.aberration;
+    u.uRadial.value = fx.radial;
+    u.uImpact.value = fx.impact > 0 ? 1 : 0;
+    u.uDesat.value = fx.desat;
+    u.uFlash.value = fx.flash;
+    u.uFade.value = fx.fade;
+    this.renderer.info.reset();
+    this.composer.render();
   }
 }
 

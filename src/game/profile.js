@@ -264,9 +264,9 @@ export function computeStats(chassisId, modIds = [], perkIds = [], opts = {}) {
   let hpMul = 1, atkMul = 1;
   if (opts.level) {
     // enemy scaling by campaign level
-    hpMul = 0.78 + 0.05 * opts.level;
-    atkMul = 0.72 + 0.036 * opts.level;
-    if (opts.boss) { hpMul *= 1.25; atkMul *= 1.06; }
+    hpMul = 0.8 + 0.035 * opts.level;
+    atkMul = 0.74 + 0.027 * opts.level;
+    if (opts.boss) { hpMul *= 1.2; atkMul *= 1.05; }
   }
   return {
     chassis: chassisId,

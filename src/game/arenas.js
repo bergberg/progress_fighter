@@ -254,9 +254,9 @@ function foundry(R) {
         float n = fbm(p + vec2(uTime * 0.12, uTime * 0.05));
         float n2 = fbm(p * 2.3 - vec2(uTime * 0.2, 0.0) + n * 2.0);
         float crust = smoothstep(0.42, 0.62, n2);
-        vec3 hot = mix(vec3(4.5, 1.4, 0.15), vec3(6.0, 3.6, 1.0), smoothstep(0.2, 0.0, n2));
+        vec3 hot = mix(vec3(1.9, 0.5, 0.05), vec3(3.2, 1.7, 0.4), smoothstep(0.25, 0.0, n2));
         vec3 col = mix(hot, vec3(0.05, 0.015, 0.01), crust);
-        col += vec3(1.6, 0.4, 0.05) * smoothstep(0.7, 0.4, n2) * 0.5;
+        col += vec3(0.7, 0.16, 0.02) * smoothstep(0.7, 0.4, n2) * 0.5;
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
@@ -265,10 +265,10 @@ function foundry(R) {
   pool.position.set(0, -2.6, -26);
   s.add(pool);
   A.updaters.push((dt, t) => (lava.uniforms.uTime.value = t));
-  const lavaLight = new THREE.PointLight(0xff6a1e, 60, 40, 1.6);
+  const lavaLight = new THREE.PointLight(0xff6a1e, 34, 40, 1.6);
   lavaLight.position.set(0, 1.5, -12);
   s.add(lavaLight);
-  A.updaters.push((dt, t) => (lavaLight.intensity = 60 + Math.sin(t * 3.1) * 8 + Math.sin(t * 7.3) * 5));
+  A.updaters.push((dt, t) => (lavaLight.intensity = 34 + Math.sin(t * 3.1) * 5 + Math.sin(t * 7.3) * 3));
 
   // giant gears
   const gearGeo = (() => {
@@ -310,7 +310,7 @@ function foundry(R) {
   const wall = new THREE.Mesh(new THREE.BoxGeometry(110, 46, 2), std(0x1c1614, 0.85, 0.5));
   wall.position.set(0, 14, -34);
   s.add(wall);
-  const winMat = glowMat(0xff7a22, 2.2);
+  const winMat = glowMat(0xff7a22, 1.3);
   const wins = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 3.4, 0.2), winMat, 26);
   const rnd = seeded(42);
   for (let i = 0; i < 26; i++) { m4.makeTranslation(-48 + i * 3.8 + rnd() * 1.2, 8 + Math.floor(rnd() * 4) * 6, -32.9); wins.setMatrixAt(i, m4); }
@@ -347,7 +347,7 @@ function foundry(R) {
   const cru = new THREE.Group();
   const bucket = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 1.8, 3.6, 20, 1, true), std(0x2a2422, 0.6, 0.9, { side: THREE.DoubleSide }));
   cru.add(bucket);
-  const melt = new THREE.Mesh(new THREE.CircleGeometry(2.25, 20), glowMat(0xff8a1e, 3.4));
+  const melt = new THREE.Mesh(new THREE.CircleGeometry(2.25, 20), glowMat(0xff8a1e, 2.2));
   melt.rotation.x = -Math.PI / 2;
   melt.position.y = 1.4;
   cru.add(melt);
@@ -363,7 +363,7 @@ function foundry(R) {
     vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader: `precision highp float; uniform float uTime; varying vec2 vUv; ${NOISE}
       void main(){ float n = vnoise(vec2(vUv.x * 6.0, vUv.y * 8.0 + uTime * 6.0)); float a = (0.55 + n * 0.6) * smoothstep(0.0, 0.08, vUv.y);
-        gl_FragColor = vec4(vec3(5.0, 2.0, 0.35) * a, a); }`,
+        gl_FragColor = vec4(vec3(2.6, 0.9, 0.12) * a, a); }`,
   });
   const pour = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 11, 10, 1, true), pourMat);
   pour.position.set(-3.6, 3.6, -14);
@@ -392,7 +392,7 @@ function foundry(R) {
     pipe.position.set(x, y, z);
     s.add(pipe);
   }
-  A.shaft(0xff8a3a, -3.6, 3, -14, 0.6, 2.6, 12, 1.4);
+  A.shaft(0xff8a3a, -3.6, 3, -14, 0.6, 2.2, 12, 0.45);
   A.shaft(0xffb070, 9, 9, -6, 0.5, 3.2, 18, 0.6, 0.2);
   A.shaft(0xffb070, -11, 9, -5, 0.5, 3.2, 18, 0.5, -0.15);
 
@@ -432,22 +432,22 @@ function skydeck(R) {
   });
   const lines = canvasTex(512, 512, (g, w, h) => {
     g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#ff48d8'; g.lineWidth = 5;
+    g.strokeStyle = '#ff48d8'; g.lineWidth = 2.5;
     g.strokeRect(2, 2, w - 4, h - 4);
-    g.strokeStyle = '#30e0ff'; g.lineWidth = 3;
+    g.strokeStyle = '#30e0ff'; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
   });
-  A.floor({ map: plateTexture('#16161d', '#07070a', null, { seed: 21, cells: 1 }), emissiveMap: lines, emissiveIntensity: 0.9, roughnessMap: roughTexture(9, 110, 100), rough: 0.5, metal: 0.55, reflect: 0.85, tint: 0x9aa0b8, repeat: [10, 4] });
+  A.floor({ map: plateTexture('#16161d', '#07070a', null, { seed: 21, cells: 1 }), emissiveMap: lines, emissiveIntensity: 0.55, roughnessMap: roughTexture(9, 110, 100), rough: 0.5, metal: 0.55, reflect: 0.7, tint: 0x9aa0b8, repeat: [10, 4] });
 
   // parapet with neon tubes
   const dark = std(0x14141c, 0.5, 0.8);
   const par = new THREE.Mesh(new THREE.BoxGeometry(70, 1.1, 0.7), dark);
   par.position.set(0, 0.5, -8.2);
   s.add(par);
-  const tube1 = new THREE.Mesh(new THREE.BoxGeometry(70, 0.07, 0.07), glowMat(0xff3fd0, 3));
+  const tube1 = new THREE.Mesh(new THREE.BoxGeometry(70, 0.07, 0.07), glowMat(0xff3fd0, 1.8));
   tube1.position.set(0, 1.1, -7.85);
   s.add(tube1);
-  const tube2 = new THREE.Mesh(new THREE.BoxGeometry(70, 0.05, 0.05), glowMat(0x2ae0ff, 3));
+  const tube2 = new THREE.Mesh(new THREE.BoxGeometry(70, 0.05, 0.05), glowMat(0x2ae0ff, 1.8));
   tube2.position.set(0, 0.25, -7.83);
   s.add(tube2);
 
@@ -467,14 +467,14 @@ function skydeck(R) {
       ${NOISE}
       void main(){
         vec2 uv = abs(vN.x) > 0.5 ? vW.zy : vW.xy;
-        vec2 cell = uv * vec2(0.55, 0.42);
+        vec2 cell = uv * vec2(2.6, 1.7);
         vec2 id = floor(cell); vec2 f = fract(cell);
-        float lit = step(0.52, hash21(id + floor(vSeed * 13.0)));
+        float lit = step(0.66, hash21(id + floor(vSeed * 13.0)));
         float flick = step(0.985, hash21(id + floor(uTime * 1.5)));
         float win = step(0.18, f.x) * step(f.x, 0.82) * step(0.25, f.y) * step(f.y, 0.78);
         float top = step(0.5, vN.y);
         vec3 base = vec3(0.012, 0.012, 0.022) + vTint * 0.012;
-        vec3 col = base + vTint * win * lit * (1.5 - flick) * (0.5 + hash21(id * 1.7) * 1.4) * (1.0 - top);
+        vec3 col = base + vTint * win * lit * (1.0 - flick * 0.7) * (0.12 + hash21(id * 1.7) * 0.62) * (1.0 - top);
         float fog = smoothstep(30.0, 190.0, vDist);
         col = mix(col, uFog, fog * 0.92);
         gl_FragColor = vec4(col, 1.0);
@@ -487,7 +487,7 @@ function skydeck(R) {
   const pal = [[1, 0.25, 0.85], [0.2, 0.9, 1], [1, 0.7, 0.3], [0.6, 0.5, 1], [0.9, 0.95, 1]];
   const m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
   for (let i = 0; i < N; i++) {
-    const z = -24 - rnd() * 140;
+    const z = -44 - rnd() * 130;
     const x = (rnd() - 0.5) * (120 + -z * 1.3);
     const w = 6 + rnd() * 12, d = 6 + rnd() * 12, h = 30 + rnd() * 90 * (rnd() < 0.2 ? 1.6 : 1);
     pos.set(x, -60 + h / 2 + rnd() * 10, z);
@@ -527,7 +527,7 @@ function skydeck(R) {
           float tri = smoothstep(0.02, 0.0, abs(abs(c.x) * 1.4 + c.y - 0.08)) * step(-0.12, c.y) * step(d, 0.17);
           float glitch = step(0.96, hash21(vec2(floor(uv.y * 30.0), floor(uTime * 9.0))));
           float a = (gl * rowMask * 0.55 * step(uv.y, 0.3) + ring + ring2 * 0.7 + tri + frame * 0.8 + 0.06) * scan;
-          vec3 col = mix(c1, c2, uv.y + glitch * 0.5) * a * 2.4;
+          vec3 col = mix(c1, c2, uv.y + glitch * 0.5) * a * 1.5;
           gl_FragColor = vec4(col, a);
         }`,
     });
@@ -816,7 +816,7 @@ function orbital(R) {
     g.beginPath(); g.moveTo(0, 8); g.lineTo(w, 8); g.stroke();
     g.beginPath(); g.moveTo(0, h - 8); g.lineTo(w, h - 8); g.stroke();
   });
-  A.floor({ map: hexTex, emissiveMap: gold, emissiveIntensity: 0.8, roughnessMap: roughTexture(17, 120, 90), rough: 0.42, metal: 0.85, reflect: 0.7, tint: 0xc4c8d4, size: [46, 16], repeat: [9.2, 3.2], z: 0 });
+  A.floor({ map: hexTex, emissiveMap: gold, emissiveIntensity: 0.45, roughnessMap: roughTexture(17, 120, 90), rough: 0.42, metal: 0.85, reflect: 0.7, tint: 0xc4c8d4, size: [46, 16], repeat: [9.2, 3.2], z: 0 });
   // platform rim
   const goldMat = std(0xd9a520, 0.28, 1);
   const dark = std(0x15171c, 0.5, 0.85);
@@ -824,7 +824,7 @@ function orbital(R) {
     const rim = new THREE.Mesh(new THREE.BoxGeometry(46.6, 0.7, 0.5), dark);
     rim.position.set(0, -0.33, z);
     s.add(rim);
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(46.6, 0.06, 0.08), glowMat(0xffc54a, 3));
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(46.6, 0.05, 0.06), glowMat(0xffc54a, 1.3));
     strip.position.set(0, 0.03, z + (z < 0 ? 0.3 : -0.3));
     s.add(strip);
   }
@@ -886,7 +886,7 @@ function orbital(R) {
         float lights = step(0.78, vnoise(vec2(lon * 90.0, lat * 90.0))) * smoothstep(0.5, 0.62, bands) * (1.0 - day);
         float fres = pow(1.0 - max(0.0, dot(n, normalize(vV))), 2.6);
         vec3 atm = vec3(0.3, 0.6, 1.4) * fres * (0.25 + day * 1.4);
-        gl_FragColor = vec4(col * day * 1.5 + vec3(1.6, 1.0, 0.4) * lights * 0.9 + atm, 1.0);
+        gl_FragColor = vec4(col * day * 0.4 + vec3(1.6, 1.0, 0.4) * lights * 0.5 + atm * 0.3, 1.0);
       }`,
   });
   const planet = new THREE.Mesh(new THREE.SphereGeometry(120, 64, 48), planetMat);
@@ -898,7 +898,7 @@ function orbital(R) {
   const halo = new THREE.Mesh(new THREE.SphereGeometry(124, 48, 32), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
     vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `precision highp float; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(max(0.0, dot(normalize(vN), -normalize(vV))), 3.0); gl_FragColor = vec4(vec3(0.25, 0.55, 1.3) * f * 0.9, f); }`,
+    fragmentShader: `precision highp float; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(max(0.0, dot(normalize(vN), -normalize(vV))), 3.0); gl_FragColor = vec4(vec3(0.25, 0.55, 1.3) * f * 0.4, f); }`,
   }));
   halo.position.copy(planet.position);
   s.add(halo);
@@ -925,7 +925,7 @@ function orbital(R) {
   crown.add(big2);
   const lightN = 160;
   const lGeo = new THREE.BoxGeometry(0.9, 0.35, 0.35);
-  const lInst = new THREE.InstancedMesh(lGeo, glowMat(0xffe2a0, 3.5), lightN);
+  const lInst = new THREE.InstancedMesh(lGeo, glowMat(0xffe2a0, 1.8), lightN);
   const m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3(1, 1, 1), eul = new THREE.Euler();
   for (let i = 0; i < lightN; i++) {
     const a = (i / lightN) * TAU;
@@ -949,17 +949,17 @@ function orbital(R) {
   const crowdMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 } },
     vertexShader: `attribute vec3 aCol; varying vec3 vC; varying float vS; void main(){ vC = aCol; vS = float(gl_InstanceID); gl_Position = projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.0); }`,
-    fragmentShader: `precision highp float; uniform float uTime; varying vec3 vC; varying float vS; void main(){ float f = 0.45 + 0.55 * step(0.5, fract(sin(vS * 12.9898) * 43758.5 + uTime * (0.3 + fract(vS * 0.37)))); gl_FragColor = vec4(vC * f * 2.2, 1.0); }`,
+    fragmentShader: `precision highp float; uniform float uTime; varying vec3 vC; varying float vS; void main(){ float f = 0.45 + 0.55 * step(0.5, fract(sin(vS * 12.9898) * 43758.5 + uTime * (0.3 + fract(vS * 0.37)))); gl_FragColor = vec4(vC * f * 0.8, 1.0); }`,
   });
   const CN = 1500;
-  const crowd = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.16, 0.16), crowdMat, CN);
+  const crowd = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.07, 0.07), crowdMat, CN);
   const cc = new Float32Array(CN * 3);
   const palette = [[1, 0.78, 0.3], [1, 1, 1], [0.4, 0.7, 1], [1, 0.4, 0.3]];
   for (let i = 0; i < CN; i++) {
     const side = i % 2 ? 1 : -1;
     const u = rnd(), v = rnd();
     const ang = (0.25 + u * 0.5) * Math.PI;
-    pos.set(Math.cos(ang) * 34 * 1 + side * 0, 1.5 + v * 9 + Math.sin(ang) * 2, -14 - Math.sin(ang) * 16 - v * 5);
+    pos.set(Math.cos(ang) * 34, 2.2 + v * 5.5 + Math.sin(ang) * 1.5, -16 - Math.sin(ang) * 16 - v * 6);
     m4.makeTranslation(pos.x, pos.y, pos.z);
     crowd.setMatrixAt(i, m4);
     cc.set(palette[(rnd() * 4) | 0], i * 3);

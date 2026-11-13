@@ -89,12 +89,13 @@ async function main() {
     cam.lookAt(0, 1.3, 0);
   }
   R.setScene(scene, cam);
-  R.render(0.016);
-  R.render(0.016);
+  R.update(0.016);
+  R.render();
+  R.render();
   window.__ready = true;
   if (q.get('spin')) {
     let last = performance.now();
-    const loop = (now) => { const dt = (now - last) / 1000; last = now; robots.forEach((r) => (r.pivot.rotation.y += dt * 0.6)); R.render(dt); requestAnimationFrame(loop); };
+    const loop = (now) => { const dt = (now - last) / 1000; last = now; robots.forEach((r) => (r.pivot.rotation.y += dt * 0.6)); R.update(dt); R.render(); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
 }

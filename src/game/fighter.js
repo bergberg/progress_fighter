@@ -755,7 +755,7 @@ export class Fighter {
     }
     // combo scaling
     const n = this.comboHits;
-    const minScale = a.comboScale ? 0.5 : 0.3;
+    const minScale = type === 'overdrive' ? 0.75 : a.comboScale ? 0.5 : 0.3;
     const decay = a.comboScale ? 0.06 : 0.1;
     dmg *= Math.max(minScale, 1 - Math.max(0, n - 1) * decay);
     dmg /= this.stats.def;
@@ -874,7 +874,7 @@ export class Fighter {
     this.trailActive = {};
   }
 
-  applyVisual(dt, time = 0) {
+  applyVisual(dt, time = 0, realDt) {
     const rig = this.rig;
     const pose = this.animator.pose;
     rig.applyPose(pose, this.grounded && !this.moveScriptedY ? this.animator.ground : this.animator.ground * (this.y < 0.3 ? 1 - this.y / 0.3 : 0));
@@ -900,8 +900,8 @@ export class Fighter {
     if (this.dead) g = 0.12;
     M.glow.emissiveIntensity = M.glowBase * g;
     M.visor.emissiveIntensity = M.glowBase * 0.9 * g;
-    this.flashT = Math.max(0, this.flashT - dt * 7);
-    const f = this.flashT * this.flashT * 1.6;
+    this.flashT = Math.max(0, this.flashT - (realDt ?? dt) * 11);
+    const f = this.flashT * this.flashT * 0.22;
     for (const m of M.flashable) m.emissive.setRGB(f, f, f);
 
     // chassis specific dynamics

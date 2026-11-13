@@ -246,16 +246,16 @@ function vanguard(d) {
       { t: 0.3, do: (f, F) => { F.fx.implode(v3(f.x, 1.3), { color: f.color, count: 40, radius: 3, life: 0.4 }); F.fx.ring(v3(f.x, 0.05), { color: f.color, r0: 3.5, r1: 0.3, dur: 0.4, ground: true, ease: (t) => t }); } },
       { t: 0.7, do: (f, F) => {
         const p = f.anchor('baseR');
-        F.fx.beam(v3(p.x, p.y), v3(p.x - f.facing * 0.6, p.y + 11), { color: f.color, width: 1.5, dur: 0.62 });
-        F.fx.pillar(p.x, { color: f.color, width: 1.3, height: 14, dur: 0.6 });
-        F.fx.flare(p, { color: 0xffffff, size: 7, life: 0.3 });
-        F.fx.light(p, f.color, 140, 0.6, 18);
+        F.fx.beam(v3(p.x, p.y), v3(p.x - f.facing * 0.5, p.y + 11), { color: f.color, width: 1.1, dur: 0.62 });
+        F.fx.pillar(p.x, { color: f.color, width: 0.7, height: 14, dur: 0.6, y: p.y });
+        F.fx.flare(v3(p.x, p.y + 0.6), { color: f.color, size: 4, life: 0.3 });
+        F.fx.light(p, f.color, 60, 0.6, 18);
         for (let i = 0; i < 5; i++) F.fx.lightning(v3(p.x, p.y + 1), v3(p.x + rand(-3, 3), rand(0, 5)), { color: f.color, dur: 0.3 });
         F.shake(0.5); F.sfx('beam'); F.R.kickAberration(0.012);
       } },
       { t: 1.25, do: (f, F) => {
         F.R.impactFrame(0.09, 0x030611, f.color);
-        F.fx.slash(v3(f.x + f.facing * 0.6, 1.5), { color: 0xffffff, color2: f.color, radius: 6.5, a0: 1.75, a1: -0.7, facing: f.facing, dur: 0.4, thick: 0.5, intensity: 2.4 });
+        F.fx.slash(v3(f.x + f.facing * 0.6, 1.5), { color: 0xffffff, color2: f.color, radius: 6.5, a0: 1.75, a1: -0.7, facing: f.facing, dur: 0.4, thick: 0.5, intensity: 1.6 });
         for (let i = 0; i < 7; i++) {
           const x = f.x + f.facing * (1.3 + i * 1.45);
           F.after(i * 0.035, () => {
@@ -852,7 +852,7 @@ function tempest(d) {
           F.fx.pillar(x, { color: f.color, width: 0.7, height: 9, dur: 0.3 });
           F.fx.groundSlam(x, f.color, 0.5);
           F.shake(0.45); F.sfx('thunder'); if (i % 3 === 0) F.R.flash(f.color, 0.12);
-          F.areaHit(f, { x0: x - 0.9, x1: x + 0.9, y0: 0, y1: 9 }, H(0, 0, 0, 0, 0, 0, 3.6, 2, { fx: 'shock', kbx: 0.3, stun: 0.5, pause: 0.03, hold: true, guard: 9, dirFrom: f.x }));
+          F.areaHit(f, { x0: x - 0.9, x1: x + 0.9, y0: 0, y1: 9 }, H(0, 0, 0, 0, 0, 0, 4.4, 2, { fx: 'shock', kbx: 0.3, stun: 0.5, pause: 0.03, hold: true, guard: 9, dirFrom: f.x }));
         },
       })),
       { t: 2.2, do: (f, F) => {

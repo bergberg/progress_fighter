@@ -12,8 +12,8 @@ export class AIController {
     this.level = clamp(level, 0, 1);
     const L = this.level;
     this.reaction = lerp(0.46, 0.09, L);
-    this.blockChance = lerp(0.08, 0.86, L);
-    this.parryChance = lerp(0, 0.3, Math.max(0, L - 0.25) / 0.75);
+    this.blockChance = lerp(0.08, 0.78, L);
+    this.parryChance = lerp(0, 0.22, Math.max(0, L - 0.25) / 0.75);
     this.aggression = lerp(0.3, 0.92, L);
     this.specialUse = lerp(0.06, 0.6, L);
     this.punish = lerp(0.1, 0.95, L);
@@ -293,5 +293,5 @@ export class AIController {
 }
 
 export function aiLevelFor(enemyLevel, boss = false) {
-  return clamp(0.05 + ((enemyLevel - 1) / 16) * 0.85 + (boss ? 0.05 : 0), 0, 0.97);
+  return clamp(0.05 + ((enemyLevel - 1) / 16) * 0.74 + (boss ? 0.05 : 0), 0, 0.9);
 }

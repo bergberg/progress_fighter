@@ -365,15 +365,13 @@ class App {
     this.last = now;
     const dt = clamp(ms / 1000, 0.0005, 0.05);
     this.input.pollGamepad();
-    if (this.fight) {
-      this.fight.update(dt);
-      if (this.fight) this.renderer.render(this.paused ? 0 : dt, this.paused ? undefined : ms);
-      else this.renderer.render(dt, ms);
-    } else {
+    if (this.fight) this.fight.update(dt);
+    else {
       this.input.takePresses();
       this.showroom.update(dt);
-      this.renderer.render(dt, ms);
     }
+    this.renderer.update(dt, this.paused ? undefined : ms);
+    this.renderer.render();
   }
 
   /** deterministic stepping for automated tests */
@@ -381,8 +379,9 @@ class App {
     for (let i = 0; i < n; i++) {
       if (this.fight) this.fight.update(dt);
       else this.showroom.update(dt);
+      this.renderer.update(dt);
     }
-    this.renderer.render(dt * n);
+    this.renderer.render();
   }
 }
 
