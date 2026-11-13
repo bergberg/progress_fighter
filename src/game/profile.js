@@ -5,6 +5,15 @@ import {
 
 const KEY = 'apex-chassis-save-v1';
 
+function defaultQuality() {
+  // phones and tablets start one notch lower; adaptive resolution handles the rest
+  try {
+    return window.matchMedia('(pointer: coarse)').matches ? 'medium' : 'high';
+  } catch {
+    return 'high';
+  }
+}
+
 function fresh() {
   const robots = {};
   for (const id of CHASSIS_ORDER) robots[id] = { mods: { ...DEFAULT_MODS }, paint: 'factory' };
@@ -20,7 +29,7 @@ function fresh() {
     selected: 'vanguard',
     campaign: {}, // stageId -> stars (1..3)
     seenIntro: false,
-    settings: { quality: 'high', sfx: 0.8, music: 0.5, shake: 1, dynamicRes: true },
+    settings: { quality: defaultQuality(), sfx: 0.8, music: 0.5, shake: 1, dynamicRes: true },
     record: { wins: 0, losses: 0, perfects: 0, maxCombo: 0 },
   };
 }

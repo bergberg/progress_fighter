@@ -411,7 +411,7 @@ export class Shield {
           vec3 col = mix(uColor, uBreak, smoothstep(0.45, 0.95, damage));
           float a = line * (0.55 + fres * 1.4) + fres * 0.5 + 0.045 + scan * 0.14 + flick * 0.2 * (1.0 - crack);
           a *= 1.0 - crack * 0.85;
-          a += rip * 2.6 + core * 3.5;
+          a += rip * 1.8 + core * 1.8;
           a *= edge * uPower;
           col = mix(col, vec3(1.0), clamp(rip * 0.8 + core, 0.0, 1.0));
           gl_FragColor = vec4(col * a * 1.5, a);
@@ -1025,7 +1025,7 @@ export class FX {
 
   /** Blocked strike: shield crackle */
   blockImpact(pos, color, power = 0.5, dirX = 1) {
-    this.flare(pos, { color, size: 1.2 + power, life: 0.1, intensity: 1.8 });
+    this.flare(pos, { color, size: 1.0 + power * 0.8, life: 0.1, intensity: 1.0 });
     this.sparks(pos, { count: 6 + power * 10, color: 0xffffff, color2: color, speed: 5 + power * 4, dir: [-dirX * 0.7, 0.3, 0], spread: 1, gravity: 4, size: 0.028 });
     this.light(pos, color, 14 + power * 20, 0.14);
   }

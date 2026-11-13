@@ -94,6 +94,27 @@ export class Fight {
 
     this.hud.showFight(this);
     this.startRound(true);
+    this.prewarm();
+  }
+
+  /** compile every effect shader up front so the first hit of a match never hitches */
+  prewarm() {
+    const hidden = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        o.visible = true;
+        hidden.push(o);
+      }
+    });
+    try {
+      this.camera.position.set(0, 2, 12);
+      this.camera.lookAt(0, 1.3, 0);
+      this.camera.updateMatrixWorld();
+      this.R.gl.compile(this.scene, this.camera);
+    } catch (e) {
+      console.warn('prewarm failed', e);
+    }
+    for (const o of hidden) o.visible = false;
   }
 
   foe(f) {
