@@ -216,6 +216,15 @@ export class AudioEngine {
         T({ f0: 90, f1: 40, dur: 0.3, gain: 0.7 });
         break;
       case 'intro': T({ f0: 55, f1: 110, dur: 2.2, gain: 0.3, type: 'sawtooth', lp: 200, lp1: 1600, attack: 0.8 }); N({ f0: 300, f1: 2500, dur: 2.0, gain: 0.08, attack: 1.2 }); break;
+      case 'purge':
+        for (let i = 0; i < 5; i++) T({ f0: 500 + Math.random() * 900, f1: 300, dur: 0.12, gain: 0.12, type: 'square', lp: 3500, at: i * 0.025 });
+        N({ type: 'highpass', f0: 1800, f1: 6000, dur: 0.3, gain: 0.35 });
+        N({ type: 'lowpass', f0: 1400, f1: 120, dur: 0.35, gain: 0.6 });
+        T({ f0: 160, f1: 45, dur: 0.3, gain: 0.7 });
+        break;
+      case 'alarm':
+        for (let i = 0; i < 3; i++) T({ f0: 880, f1: 660, dur: 0.14, gain: 0.1, type: 'square', lp: 2600, at: i * 0.2 });
+        break;
       case 'deny': T({ f0: 150, dur: 0.16, gain: 0.16, type: 'square', lp: 900 }); break;
       case 'uiMove': T({ f0: 980, dur: 0.035, gain: 0.07, type: 'triangle' }); break;
       case 'uiSelect': T({ f0: 700, dur: 0.06, gain: 0.1, type: 'triangle' }); T({ f0: 1050, dur: 0.1, gain: 0.1, type: 'triangle', at: 0.05 }); break;

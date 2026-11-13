@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Fighter, STAGE_HALF } from './fighter.js';
 import { AIController } from './ai.js';
+import { Hazard } from './hazards.js';
 import { FX } from '../engine/fx.js';
 import { createArena } from './arenas.js';
 import { computeStats } from './profile.js';
@@ -22,7 +23,7 @@ class PlayerController {
     f.ctl.block = inp.held('block');
     f.ctl.heavyHeld = inp.held('heavy');
     for (const a of inp.takePresses()) {
-      if (a === 'light' || a === 'heavy' || a === 'special' || a === 'overdrive' || a === 'jump' || a === 'dash') f.press(a);
+      if (a === 'light' || a === 'heavy' || a === 'special' || a === 'overdrive' || a === 'jump' || a === 'dash' || a === 'purge') f.press(a);
     }
   }
 }
@@ -54,7 +55,7 @@ export class Fight {
     if (mod === 'sudden') { this.damageMul = 1.5; this.roundsToWin = 1; }
     if (mod === 'nometer') this.meterMul = 0.5;
 
-    const s1 = computeStats(cfg.p1.chassis, cfg.p1.mods, cfg.p1.perks || []);
+    const s1 = computeStats(cfg.p1.chassis, cfg.p1.mods, cfg.p1.perks || [], { extra: cfg.p1Extra });
     const s2 = computeStats(cfg.p2.chassis, cfg.p2.mods, cfg.p2.perks || [], { level: cfg.p2.level, boss: cfg.p2.boss });
     this.fighters = [];
     this.fighters.push(new Fighter(this, 0, cfg.p1, s1));
@@ -91,6 +92,12 @@ export class Fight {
     this.ended = false;
     this.stats = { maxCombo: 0, dmgDealt: 0, dmgTaken: 0, parries: 0, roundsLost: 0, perfectRounds: 0, lastHpPct: 1 };
     this.combo = [{ hits: 0, dmg: 0 }, { hits: 0, dmg: 0 }]; // combo performed BY fighter idx
+    this.debris = [];
+    this.baseGravity = this.gravityScale;
+    this.danger = null;
+    // neutral "attacker" used for arena hazard damage
+    this.arenaAtt = { idx: -1, x: 0, y: 0, facing: 1, fx: {}, stats: { atk: 1, crit: 0, critDmg: 1.5, meter: 0 }, hp: 1, hpMax: 1, meter: 0, shed: 0, firstStrikeReady: false, vx: 0, move: null };
+    this.hazard = new Hazard(this, cfg.hazards === false ? null : cfg.arena);
 
     this.hud.showFight(this);
     this.startRound(true);
@@ -145,6 +152,10 @@ export class Fight {
     this.round++;
     const [a, b] = this.fighters;
     a.reset(-2.6, 1);
+    if (this.cfg.p1HpPct !== undefined && this.cfg.p1HpPct < 1) {
+      a.hp = Math.max(1, a.hpMax * this.cfg.p1HpPct);
+      a.hpLag = a.hp;
+    }
     b.reset(2.6, -1);
     if (this.cfg.modifier === 'frenzy') b.meter = 100;
     this.clearEntities();
@@ -153,6 +164,11 @@ export class Fight {
     this.roundDamageTaken = 0;
     this.combo[0].hits = this.combo[1].hits = 0;
     this.hud.setRounds(a.wins, b.wins, this.roundsToWin);
+    this.hud.setPlates(0, a.plates);
+    this.hud.setPlates(1, b.plates);
+    this.clearDebris();
+    this.hazard.reset();
+    this.gravityScale = this.baseGravity;
     this.R.setDesat(0);
     this.cine = null;
     this.camFocus = null;
@@ -293,7 +309,7 @@ export class Fight {
       if (s.roundsLost === 0) stars++;
       if (s.lastHpPct >= 0.5) stars++;
     }
-    this.cfg.onEnd?.({ won: playerWon, stars, maxCombo: s.maxCombo, perfect: s.perfectRounds > 0, parries: s.parries, dmgDealt: Math.round(s.dmgDealt), dmgTaken: Math.round(s.dmgTaken) });
+    this.cfg.onEnd?.({ won: playerWon, stars, maxCombo: s.maxCombo, perfect: s.perfectRounds > 0, parries: s.parries, dmgDealt: Math.round(s.dmgDealt), dmgTaken: Math.round(s.dmgTaken), hpPct: playerWon ? s.lastHpPct : 0 });
   }
 
   // -------------------------------------------------------------------------
@@ -512,6 +528,171 @@ export class Fight {
     for (const p of this.projectiles) this.killProjectile(p, true);
     this.projectiles.length = 0;
     this.endRound(att);
+  }
+
+  // -------------------------------------------------------------------------
+  // clashes: two strikes that meet head-on collide instead of trading
+  // -------------------------------------------------------------------------
+  activeHit(f) {
+    const m = f.move;
+    if (f.state !== 'attack' || !m || f.landed || f.hidden) return null;
+    const t = f.moveT;
+    for (let i = 0; i < m.hits.length; i++) {
+      const h = m.hits[i];
+      if (t < h.t0 || t > h.t1 || f.moveHit[i] >= 0) continue;
+      const sc = f.scale;
+      const xa = f.x + f.facing * h.x0 * sc, xb = f.x + f.facing * h.x1 * sc;
+      return { i, h, x0: Math.min(xa, xb), x1: Math.max(xa, xb), y0: f.y + h.y0 * sc, y1: f.y + h.y1 * sc, power: (m.type === 'overdrive' ? 9 : h.level) + (f.charged ? 1 : 0) + (f.hasArmor ? 1 : 0) };
+    }
+    return null;
+  }
+
+  checkClash(a, b) {
+    const ha = this.activeHit(a);
+    if (!ha) return;
+    const hb = this.activeHit(b);
+    if (!hb) return;
+    if (ha.x1 < hb.x0 || hb.x1 < ha.x0 || ha.y1 < hb.y0 || hb.y1 < ha.y0) return;
+    if (ha.power >= 9 || hb.power >= 9) return; // nothing stops an Overdrive
+    const pos = v3((Math.max(ha.x0, hb.x0) + Math.min(ha.x1, hb.x1)) / 2, clamp((Math.max(ha.y0, hb.y0) + Math.min(ha.y1, hb.y1)) / 2, 0.6, 2.6), 0.4);
+    this.fx.flare(pos, { color: 0xffffff, size: 3.4, life: 0.16, intensity: 1.6 });
+    this.fx.ring(pos, { color: 0xffe9b0, r0: 0.2, r1: 3.2, dur: 0.35, width: 0.1 });
+    this.fx.sparks(pos, { count: 44, color: 0xffffff, color2: 0xffb040, speed: 14, size: 0.045, life: 0.7, gravity: 6 });
+    this.fx.light(pos, 0xffe0a0, 70, 0.25);
+    this.sfx('clash');
+    this.shake(0.6);
+    this.hitstop = Math.max(this.hitstop, 0.14);
+    this.R.kickAberration(0.012);
+    for (const f of [a, b]) f.meter = Math.min(100, f.meter + 6);
+    if (ha.power === hb.power) {
+      a.moveHit[ha.i] = a.moveT;
+      b.moveHit[hb.i] = b.moveT;
+      for (const f of [a, b]) {
+        f.setState('hitstun', 0.36);
+        f.vx = -f.facing * 7 / f.stats.weight;
+        f.animator.play(f.anims.blockHit, 0.03);
+      }
+      this.hud.popup('CLASH', pos.x, pos.y + 1.0, 'clash');
+    } else {
+      // the heavier strike ploughs through
+      const [win, lose, hl] = ha.power > hb.power ? [a, b, hb] : [b, a, ha];
+      lose.moveHit[hl.i] = lose.moveT;
+      lose.setState('hitstun', 0.3);
+      lose.vx = -lose.facing * 3;
+      lose.animator.play(lose.anims.hitHeavy, 0.03);
+      this.hud.popup('OVERPOWERED', pos.x, pos.y + 1.0, 'warn');
+      win.glowBoost = 2;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // armour purge + debris
+  // -------------------------------------------------------------------------
+  spawnDebris(src, f, force = 1) {
+    const geo = src.geometry;
+    if (!geo.boundingBox) geo.computeBoundingBox();
+    const c = geo.boundingBox.getCenter(new THREE.Vector3());
+    const g = new THREE.Group();
+    const m = new THREE.Mesh(geo, src.material);
+    m.position.copy(c).negate();
+    m.castShadow = true;
+    g.add(m);
+    src.matrixWorld.decompose(g.position, g.quaternion, g.scale);
+    g.position.copy(c).applyMatrix4(src.matrixWorld);
+    this.scene.add(g);
+    const dx = g.position.x - f.x, dy = g.position.y - (f.y + f.height * 0.5);
+    const l = Math.hypot(dx, dy) || 1;
+    this.debris.push({
+      g, s0: g.scale.x, rad: Math.max(0.05, geo.boundingBox.getSize(_v).length() * 0.2 * g.scale.x),
+      vx: ((dx / l) * rand(2, 5) + rand(-1.5, 1.5)) * force, vy: (rand(3, 7) + (dy / l) * 2.5) * force, vz: rand(-2, 3) * force,
+      wx: rand(-9, 9), wy: rand(-9, 9), wz: rand(-9, 9), life: rand(2.4, 3.4),
+    });
+  }
+
+  updateDebris(dt) {
+    const list = this.debris;
+    const g = 22 * this.gravityScale;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const d = list[i];
+      d.life -= dt;
+      if (d.life <= 0) {
+        this.scene.remove(d.g);
+        list.splice(i, 1);
+        continue;
+      }
+      d.vy -= g * dt;
+      const p = d.g.position;
+      p.x += d.vx * dt; p.y += d.vy * dt; p.z += d.vz * dt;
+      if (p.y < d.rad) {
+        p.y = d.rad;
+        if (d.vy < -3) this.fx.sparks(p, { count: 3, speed: 3, color: 0xffe0b0, color2: 0xff7020, life: 0.3, size: 0.025 });
+        d.vy *= -0.36;
+        d.vx *= 0.6; d.vz *= 0.6;
+        d.wx *= 0.55; d.wy *= 0.55; d.wz *= 0.55;
+      }
+      if (Math.abs(p.x) > STAGE_HALF + 3) d.vx *= -0.4;
+      p.z = clamp(p.z, -4, 3.5);
+      d.g.rotation.x += d.wx * dt; d.g.rotation.y += d.wy * dt; d.g.rotation.z += d.wz * dt;
+      if (d.life < 0.5) d.g.scale.setScalar(d.s0 * (d.life / 0.5));
+    }
+  }
+
+  clearDebris() {
+    for (const d of this.debris) this.scene.remove(d.g);
+    this.debris.length = 0;
+  }
+
+  onPurge(f, layer, voluntary, silent) {
+    this.hud.setPlates(f.idx, f.plates);
+    if (silent) return;
+    const c = v3(f.x, f.y + f.height * 0.55, 0.3);
+    this.fx.ring(c, { color: f.color, r0: 0.3, r1: voluntary ? 4.4 : 2.6, dur: 0.4, width: 0.1 });
+    this.fx.sparks(c, { count: 40, color: 0xffffff, color2: f.color, speed: 13, size: 0.045, life: 0.7 });
+    this.fx.smoke(c, { count: 6, size: 0.6, alpha: 0.3, speed: 3 });
+    this.fx.light(c, f.color, 60, 0.3);
+    this.sfx('purge');
+    this.shake(voluntary ? 0.6 : 0.35);
+    this.hud.popup(voluntary ? 'PURGE' : 'PLATING LOST', f.x, f.y + f.height + 0.5, 'purge');
+    this.hud.popup(f.plates === 0 ? 'LIMITERS OFF' : layer.name, f.x, f.y + f.height + 0.05, f.plates === 0 ? 'gold' : 'sub');
+    if (voluntary) {
+      this.fx.dome(v3(f.x, 0), { color: f.color, r0: 0.4, r1: 2.7, dur: 0.35 });
+      this.R.kickAberration(0.012);
+      this.hitstop = Math.max(this.hitstop, 0.07);
+      // shrapnel burst knocks the opponent away
+      this.areaHit(f, { x0: f.x - 2.4, x1: f.x + 2.4, y0: f.y - 0.5, y1: f.y + 3.4 }, { dmg: 4, level: 2, kbx: 8, kby: 7, stun: 0.4, block: 0.3, guard: 18, pause: 0.06, fx: 'hit', noParry: true, dirFrom: f.x });
+    }
+  }
+
+  /** damage from the arena itself */
+  hazardHit(def, hit, srcX, color) {
+    const att = this.arenaAtt;
+    att.x = srcX;
+    att.color = color;
+    const res = def.receive(att, hit, { remote: true, srcX });
+    if (!res) return false;
+    const pos = v3(def.x, def.y + def.height * 0.55, 0.35);
+    if (res.type === 'hit' || res.type === 'armor') {
+      this.fx.impact(pos, color, hit.level / 3, res.dir);
+      this.sfx(hit.level >= 3 ? 'hitHeavy' : 'hitMedium');
+      this.hitstop = Math.max(this.hitstop, hit.pause ?? 0.05);
+      this.shake(0.2 + hit.level * 0.12);
+      this.hud.damage(res.dmg, pos.x, pos.y + 0.5, false, 1 - def.idx);
+      if (def.idx === 0) this.stats.dmgTaken += res.dmg;
+      if (res.ko) this.onKO(this.foe(def), def, pos);
+      return true;
+    }
+    if (res.type === 'block') {
+      this.fx.blockImpact(v3(def.x + def.facing * 0.5, pos.y, 0.4), def.color, 0.5, res.dir);
+      this.sfx('block');
+    } else if (res.type === 'parry') {
+      this.fx.parryBurst(v3(def.x + def.facing * 0.6, pos.y, 0.4), def.color, def.facing);
+      this.sfx('parry');
+      this.hud.popup('PARRY', pos.x, pos.y + 1.1, 'parry');
+    } else if (res.type === 'break') {
+      this.fx.guardBreak(pos, res.dir);
+      this.sfx('guardBreak');
+    }
+    return false;
   }
 
   // -------------------------------------------------------------------------
@@ -781,8 +962,10 @@ export class Fight {
         }
       }
     }
+    this.checkClash(a, b);
     this.checkMelee(a);
     this.checkMelee(b);
+    this.hazard.update(h);
     this.updateProjectiles(h);
     this.updateTraps(h);
   }
@@ -818,6 +1001,7 @@ export class Fight {
     const visDt = simDt > 0 ? simDt : dt * 0.02;
     for (const f of this.fighters) f.applyVisual(visDt, this.simTime, dt);
     this.fx.update(simDt > 0 ? simDt : dt * 0.12);
+    this.updateDebris(simDt > 0 ? simDt : dt * 0.12);
     this.arena.update(dt * (0.3 + 0.7 * this.timeScale), this.realTime, this);
     this.updateCamera(dt);
     this.hud.updateFight(this, dt);
@@ -895,6 +1079,7 @@ export class Fight {
 
   dispose() {
     this.clearEntities();
+    this.clearDebris();
     for (const f of this.fighters) f.dispose();
     this.fx.dispose();
     this.arena.dispose();

@@ -11,7 +11,7 @@ export class HUD {
     root.appendChild(this.el);
     const side = (i) => `
       <div class="pl p${i + 1}">
-        <div class="pl-head"><span class="pl-name"></span><span class="pl-lv"></span><span class="pips"></span></div>
+        <div class="pl-head"><span class="pl-name"></span><span class="pl-lv"></span><span class="plates" title="Armor plating"></span><span class="pips"></span></div>
         <div class="hp"><i class="hp-lag"></i><i class="hp-fill"></i><i class="hp-barrier"></i><b class="hp-ticks"></b></div>
         <div class="sub">
           <div class="bar guard"><i></i><span>GUARD</span></div>
@@ -26,6 +26,7 @@ export class HUD {
       <div class="movename p1"></div><div class="movename p2"></div>
       <div class="modifier"></div>
       <div class="hints hidden"></div>
+      <div class="hazard"></div>
       <div class="popups"></div>
       <div class="announce"></div>
       <div class="versus"></div>
@@ -33,6 +34,8 @@ export class HUD {
       <div class="touch hidden">
         <div class="stick"><div class="stick-knob"></div></div>
         <div class="tbtns">
+          <button data-a="purge" class="tb t-pg">PURGE</button>
+          <button data-a="jump" class="tb t-jp">JUMP</button>
           <button data-a="overdrive" class="tb t-od">OD</button>
           <button data-a="block" class="tb t-blk">BLOCK</button>
           <button data-a="dash" class="tb t-dsh">DASH</button>
@@ -46,7 +49,7 @@ export class HUD {
     this.sides = [0, 1].map((i) => {
       const p = q(`.pl.p${i + 1}`);
       return {
-        root: p, name: p.querySelector('.pl-name'), lv: p.querySelector('.pl-lv'), pips: p.querySelector('.pips'),
+        root: p, name: p.querySelector('.pl-name'), lv: p.querySelector('.pl-lv'), pips: p.querySelector('.pips'), plates: p.querySelector('.plates'),
         hp: p.querySelector('.hp-fill'), lag: p.querySelector('.hp-lag'), barrier: p.querySelector('.hp-barrier'), hpWrap: p.querySelector('.hp'),
         guard: p.querySelector('.guard i'), guardWrap: p.querySelector('.guard'), en: p.querySelector('.en i'), enWrap: p.querySelector('.en'),
         od: q(`.od.p${i + 1}`), odFill: q(`.od.p${i + 1} .od-bar i`), combo: q(`.combo.p${i + 1}`), move: q(`.movename.p${i + 1}`),
@@ -131,7 +134,7 @@ export class HUD {
     const hints = this.el.querySelector('.hints');
     const show = !!fight.cfg.hints && !this.isTouch;
     hints.classList.toggle('hidden', !show);
-    if (show) hints.innerHTML = [['A/D', 'move'], ['W', 'jump'], ['J', 'light'], ['K', 'heavy'], ['L', 'special'], ['I', 'block / parry'], ['SPACE', 'dash'], ['O', 'overdrive']].map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join('');
+    if (show) hints.innerHTML = [['A/D', 'move'], ['W', 'jump'], ['J', 'light'], ['K', 'heavy'], ['L', 'special'], ['I', 'block / parry'], ['SPACE', 'dash'], ['U', 'purge armor'], ['O', 'overdrive']].map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join('');
     for (const s of this.sides) {
       s.cache = {};
       s.combo.className = s.combo.className.replace(/ show| end/g, '');
@@ -145,6 +148,20 @@ export class HUD {
     this.el.classList.add('hidden');
     this.fight = null;
     this.letterbox(false);
+  }
+
+  setPlates(i, n) {
+    this.sides[i].plates.innerHTML = Array.from({ length: 4 }, (_, k) => `<i class="${k < n ? 'on' : ''}"></i>`).join('');
+    this.sides[i].plates.classList.toggle('bare', n === 0);
+  }
+
+  hazard(name, color) {
+    const h = this.el.querySelector('.hazard');
+    h.style.setProperty('--c', '#' + color.toString(16).padStart(6, '0'));
+    h.innerHTML = `<b>⚠</b> ${name}`;
+    h.classList.remove('show');
+    void h.offsetWidth;
+    h.classList.add('show');
   }
 
   setRounds(w1, w2, need) {

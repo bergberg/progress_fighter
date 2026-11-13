@@ -9,7 +9,7 @@ import { createArena } from './game/arenas.js';
 import { buildRobot, disposeRig } from './robots/chassis.js';
 import { Animator } from './robots/anim.js';
 import { getMoveset } from './robots/moveset.js';
-import { CHASSIS, STAGE_BY_ID, MODIFIERS, MODS, SECTORS, resolvePaint } from './game/data.js';
+import { CHASSIS, CHASSIS_ORDER, STAGE_BY_ID, MODIFIERS, MODS, SECTORS, PAINTS, ARENAS, BOONS, BOON_BY_ID, GAUNTLET_NAMES, gauntletRewards, resolvePaint } from './game/data.js';
 import { HUD } from './ui/hud.js';
 import { UI } from './ui/ui.js';
 import { damp, clamp, pick } from './engine/utils.js';
@@ -22,6 +22,8 @@ const VIEWS = {
   garage: { pos: [0.3, 1.55, 8.2], look: [0.3, 1.32, 0], spin: 0 },
   campaign: { pos: [-0.75, 1.6, 8.8], look: [-0.95, 1.3, 0], spin: 0.35 },
   quick: { pos: [-1.7, 1.6, 8.6], look: [-2.0, 1.3, 0], spin: 0.35 },
+  gauntlet: { pos: [-1.7, 1.6, 8.6], look: [-2.0, 1.3, 0], spin: 0.35 },
+  boon: { pos: [0, 1.5, 10.5], look: [0, 3.6, 0], spin: 0.5 },
   results: { pos: [-1.6, 1.3, 7.4], look: [-2.0, 1.5, 0], spin: 0.2 },
 };
 
@@ -210,6 +212,7 @@ class App {
       case 'garage': ui.showGarage(); this.refreshRobot(); break;
       case 'campaign': ui.showCampaign(); this.previewStage(ui.selStage); break;
       case 'quick': ui.showQuick(); this.previewQuick(); break;
+      case 'gauntlet': ui.showGauntlet(); this.refreshRobot(); break;
       default: break;
     }
   }
@@ -263,6 +266,7 @@ class App {
       modifierInfo: st.modifier ? MODIFIERS[st.modifier] : null,
       aiLevel: aiLevelFor(st.enemy.level, st.boss),
       hints: st.enemy.level <= 3,
+      hazards: id !== '1-1',
       subtitle: `${sector.name} · ${st.boss ? 'BOSS BOUT' : 'BOUT ' + st.id}`,
       title: `${st.id} · ${st.name}`,
     });
@@ -300,10 +304,112 @@ class App {
   }
 
   retry() {
-    if (this.lastCfg) this.launch(this.lastCfg);
+    if (!this.lastCfg) return;
+    if (this.lastCfg.gauntlet) {
+      this.ui.toast('No restarts in the Gauntlet', 'warn');
+      return;
+    }
+    this.launch(this.lastCfg);
+  }
+
+  // ---- gauntlet ---------------------------------------------------------------
+  startGauntlet() {
+    this.run = { floor: 1, cleared: 0, hpPct: 1, boons: [], credits: 0, xp: 0, seed: (Math.random() * 1e9) | 0 };
+    this.run.enemy = this.gauntletEnemy(1);
+    this.gauntletFight();
+  }
+
+  gauntletEnemy(floor) {
+    const level = Math.min(22, 1 + Math.round((floor - 1) * 1.2));
+    const boss = floor % 5 === 0;
+    const chassis = pick(CHASSIS_ORDER);
+    const slots = ['arms', 'plating', 'core', 'legs', 'chip'];
+    const mods = [];
+    const n = Math.min(5, Math.floor(level / 3) + (boss ? 1 : 0));
+    for (let i = 0; i < n; i++) {
+      const pool = MODS.filter((m) => m.slot === slots[i] && m.price > 0 && m.rarity <= 1 + Math.floor(level / 5));
+      if (pool.length) mods.push(pick(pool).id);
+    }
+    const paints = PAINTS.filter((p) => p.primary !== undefined);
+    const mod = floor > 3 && !boss && Math.random() < 0.3 ? pick(['overcharged', 'lowgrav', 'nometer']) : boss && floor >= 10 ? 'frenzy' : null;
+    return {
+      chassis, mods, perks: [], paint: pick(paints), level, boss,
+      name: (boss ? 'WARDEN ' : '') + pick(GAUNTLET_NAMES), arena: pick(Object.keys(ARENAS)), modifier: mod,
+    };
+  }
+
+  gauntletFight() {
+    const run = this.run;
+    const e = run.enemy;
+    this.launch({
+      gauntlet: true,
+      p2: e,
+      arena: e.arena,
+      rounds: 1,
+      modifier: e.modifier,
+      modifierInfo: e.modifier ? MODIFIERS[e.modifier] : null,
+      aiLevel: aiLevelFor(e.level, e.boss),
+      p1HpPct: run.hpPct,
+      p1Extra: run.boons.map((id) => BOON_BY_ID[id]),
+      subtitle: `GAUNTLET · FLOOR ${run.floor}${e.boss ? ' · WARDEN' : ''}`,
+      title: `Gauntlet floor ${run.floor}`,
+    });
+  }
+
+  boonChoices() {
+    const run = this.run;
+    const pool = BOONS.filter((b) => !(b.unique && run.boons.includes(b.id)) && !(b.instant === 'repair' && run.hpPct > 0.8));
+    const out = [];
+    while (out.length < 3 && pool.length) out.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
+    return out;
+  }
+
+  pickBoon(id) {
+    const run = this.run;
+    const b = BOON_BY_ID[id];
+    if (!run || !b) return;
+    if (b.instant === 'repair') run.hpPct = Math.min(1, run.hpPct + 0.45);
+    else run.boons.push(id);
+    this.gauntletFight();
+  }
+
+  finishGauntlet() {
+    const run = this.run;
+    if (!run) return;
+    this.run = null;
+    const summary = this.profile.applyGauntlet({ floors: run.cleared, credits: run.credits, xp: run.xp });
+    this.state = 'results';
+    this.showroom.setView('results');
+    this.refreshRobot(true);
+    this.ui.showGauntletEnd(summary, run);
+    this.audio.play(summary.newBest ? 'levelUp' : 'uiBack');
+  }
+
+  onGauntletFightEnd(cfg, res) {
+    const run = this.run;
+    this.endFight();
+    if (!run) return this.go('menu');
+    if (!res.won) return this.finishGauntlet();
+    const e = run.enemy;
+    const rw = gauntletRewards(e.level, e.boss);
+    run.cleared = run.floor;
+    run.credits += rw.credits;
+    run.xp += rw.xp;
+    run.lastReward = rw;
+    run.hpPct = Math.min(1, Math.max(0.05, res.hpPct) + 0.2);
+    run.floor++;
+    run.enemy = this.gauntletEnemy(run.floor);
+    this.state = 'boon';
+    this.showroom.setView('boon');
+    const s = computeStats(run.enemy.chassis, run.enemy.mods, []);
+    this.showroom.key = '';
+    this.showroom.setRobot(run.enemy.chassis, run.enemy.paint, s.visuals, run.enemy.boss ? 1.12 : 1);
+    this.ui.showBoons(run, this.boonChoices());
+    this.audio.play('reward');
   }
 
   onFightEnd(cfg, res) {
+    if (cfg.gauntlet) return this.onGauntletFightEnd(cfg, res);
     const summary = this.profile.applyResult({ stageId: cfg.stageId, won: res.won, stars: res.stars, maxCombo: res.maxCombo, perfect: res.perfect, enemyLevel: cfg.p2.level });
     this.endFight();
     this.state = 'results';
@@ -328,6 +434,7 @@ class App {
   quitFight() {
     const cfg = this.lastCfg;
     this.endFight();
+    if (cfg && cfg.gauntlet) return this.finishGauntlet();
     this.refreshRobot(true);
     this.go(cfg && cfg.stageId ? 'campaign' : 'quick');
   }

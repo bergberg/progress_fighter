@@ -30,7 +30,7 @@ function fresh() {
     campaign: {}, // stageId -> stars (1..3)
     seenIntro: false,
     settings: { quality: defaultQuality(), sfx: 0.8, music: 0.5, shake: 1, dynamicRes: true },
-    record: { wins: 0, losses: 0, perfects: 0, maxCombo: 0 },
+    record: { wins: 0, losses: 0, perfects: 0, maxCombo: 0, bestGauntlet: 0, gauntletRuns: 0 },
   };
 }
 
@@ -228,6 +228,33 @@ export class Profile {
     return out;
   }
 
+  /** bank the rewards of a finished Gauntlet run */
+  applyGauntlet({ floors, credits, xp }) {
+    const d = this.data;
+    const fxs = this.perkFx();
+    credits = Math.round(credits * (1 + (fxs.credits || 0)));
+    xp = Math.round(xp * (1 + (fxs.xp || 0)));
+    const out = { floors, credits, xp, levelsGained: 0, perkPoints: 0, newPaints: [], levelBefore: d.level, xpBefore: d.xp, best: d.record.bestGauntlet || 0 };
+    d.credits += credits;
+    d.xp += xp;
+    while (d.level < MAX_LEVEL && d.xp >= xpForLevel(d.level)) {
+      d.xp -= xpForLevel(d.level);
+      d.level++;
+      d.perkPoints++;
+      out.levelsGained++;
+      out.perkPoints++;
+      for (const p of Object.values(PAINT_BY_ID)) if (p.level === d.level) out.newPaints.push(p.name);
+    }
+    out.newBest = floors > out.best;
+    d.record.bestGauntlet = Math.max(out.best, floors);
+    d.record.gauntletRuns = (d.record.gauntletRuns || 0) + 1;
+    out.level = d.level;
+    out.xpAfter = d.xp;
+    out.xpNeed = xpForLevel(d.level);
+    this.save();
+    return out;
+  }
+
   perkFx() {
     const fx = {};
     for (const id of this.data.perks) Object.assign(fx, PERK_BY_ID[id].fx);
@@ -269,6 +296,11 @@ export function computeStats(chassisId, modIds = [], perkIds = [], opts = {}) {
     if (!p) continue;
     addStats(p.stats);
     addFx(p.fx);
+  }
+  // run-only boons (Gauntlet)
+  for (const b of opts.extra || []) {
+    addStats(b.stats || {});
+    addFx(b.fx || {});
   }
   let hpMul = 1, atkMul = 1;
   if (opts.level) {

@@ -22,6 +22,21 @@ function skeleton(b, o = {}) {
     b.add('spine', G.box(0.012, 0.012, w + 0.01, 0.004), 'dark', (o.waistD ?? 0.2) * 0.5 + 0.012, (d.spine / segs) * (i + 0.5), 0);
   }
   b.add('hips', G.box((o.waistD ?? 0.2) * 0.9, d.pelvis + 0.04, (o.waistW ?? 0.3) * 0.92, 0.025), 'frame', 0.005, d.pelvis * 0.5 + 0.06, 0);
+  // rib cage, exposed reactor and sensor skull: only visible once the plating has been purged
+  const cw = (o.waistW ?? 0.3) * 1.05, cd = (o.waistD ?? 0.2);
+  for (let i = 0; i < 4; i++) {
+    const y = d.chest * (0.14 + i * 0.2);
+    b.add('chest', G.box(cd * (0.9 + i * 0.05), d.chest * 0.09, cw * (0.86 + i * 0.06), 0.02), 'frame', 0.02, y, 0);
+  }
+  b.add('chest', G.cyl(0.035, 0.045, d.chest * 0.86, 10), 'chrome', -cd * 0.3, d.chest * 0.45, 0);
+  b.add('chest', G.sphere(Math.min(cd, cw) * 0.36, 14, 10), 'glowDim', cd * 0.12, d.chest * 0.47, 0);
+  b.add('chest', G.torus(Math.min(cd, cw) * 0.44, 0.012, 16), 'chrome', cd * 0.12, d.chest * 0.47, 0, 0, 90, 0);
+  b.both((S, s) => {
+    b.add('chest', G.box(0.05, 0.05, d.shoulderW - cw * 0.4, 0.015), 'frame', 0, d.shoulderY, s * (cw * 0.2 + d.shoulderW * 0.5));
+  });
+  const hk = d.headH / 0.34;
+  b.add('head', G.box(0.13 * hk, 0.14 * hk, 0.125 * hk, 0.03), 'frame', 0.02, d.headH * 0.5, 0);
+  b.add('head', G.box(0.03, 0.03 * hk, 0.1 * hk, 0.008), 'glowDim', 0.02 + 0.066 * hk, d.headH * 0.54, 0);
   b.both((S, s) => {
     b.piston('spine', [-0.07, 0.0, s * 0.11], [-0.09, d.spine, s * 0.13], 0.014);
     b.piston('spine', [0.08, 0.0, s * 0.1], [0.1, d.spine, s * 0.13], 0.011);

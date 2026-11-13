@@ -1,8 +1,9 @@
 import { el, formatNum, hexToCss } from '../engine/utils.js';
 import {
   CHASSIS, CHASSIS_ORDER, RARITY, SLOTS, MODS, MOD_BY_ID, PERKS, PERK_BRANCHES, PERK_BY_ID, PERK_TIER_REQ, PAINTS, SECTORS, STAGES, STAGE_BY_ID,
-  MODIFIERS, ARENAS, CONTROLS, xpForLevel, stageRewards, resolvePaint, MAX_LEVEL,
+  MODIFIERS, ARENAS, CONTROLS, BOON_BY_ID, xpForLevel, stageRewards, resolvePaint, MAX_LEVEL,
 } from '../game/data.js';
+import { HAZARD_INFO } from '../game/hazards.js';
 import { computeStats, statRatings } from '../game/profile.js';
 import { getMoveset } from '../robots/moveset.js';
 import { QUALITY } from '../engine/renderer.js';
@@ -103,10 +104,11 @@ export class UI {
         <div class="mm-logo"><span>APEX</span><b>CHASSIS</b></div>
         <nav class="mm-nav">
           <button data-act="campaign"><i>01</i><b>CAMPAIGN</b><span>${P.campaignComplete ? 'Crown secured · replay any bout' : `Next: ${next.id} “${next.name}”`} · ${cleared}/${STAGES.length} cleared · ${P.totalStars}★</span></button>
-          <button data-act="quick"><i>02</i><b>QUICK BATTLE</b><span>Any opponent, any arena, any difficulty</span></button>
-          <button data-act="garage"><i>03</i><b>GARAGE</b><span>Chassis, mods, perks and paint${P.data.perkPoints ? ` · <em>${P.data.perkPoints} perk point${P.data.perkPoints > 1 ? 's' : ''} ready</em>` : ''}</span></button>
-          <button data-act="help"><i>04</i><b>HOW TO PLAY</b><span>Controls and combat systems</span></button>
-          <button data-act="settings"><i>05</i><b>SETTINGS</b><span>Graphics, audio, save data</span></button>
+          <button data-act="gauntlet"><i>02</i><b>GAUNTLET</b><span>Endless run · hull carries over · salvage an upgrade after every win${P.data.record.bestGauntlet ? ` · <em>best: floor ${P.data.record.bestGauntlet}</em>` : ''}</span></button>
+          <button data-act="quick"><i>03</i><b>QUICK BATTLE</b><span>Any opponent, any arena, any difficulty</span></button>
+          <button data-act="garage"><i>04</i><b>GARAGE</b><span>Chassis, mods, perks and paint${P.data.perkPoints ? ` · <em>${P.data.perkPoints} perk point${P.data.perkPoints > 1 ? 's' : ''} ready</em>` : ''}</span></button>
+          <button data-act="help"><i>05</i><b>HOW TO PLAY</b><span>Controls and combat systems</span></button>
+          <button data-act="settings"><i>06</i><b>SETTINGS</b><span>Graphics, audio, save data</span></button>
         </nav>
       </div>
       <div class="mm-robot">
@@ -243,6 +245,7 @@ export class UI {
         ${row(k('D + L'), ms.spF, 'hold a direction')}
         ${row(k('S + L'), ms.spD)}
         ${row(k('O'), ms.overdrive, 'requires a full Overdrive meter')}
+        ${row(k('U'), { name: 'Armor Purge' }, 'shrapnel burst · breaks combos · 4 layers per round')}
       </table>
       <div class="modal-btns"><button class="btn" data-act="${inFight ? 'pauseback' : 'closemodal'}">CLOSE</button></div>`, 'wide');
   }
@@ -276,6 +279,7 @@ export class UI {
         <div class="brief-enemy"><small>OPPONENT</small><b>${e.name}</b><span>${CHASSIS[e.chassis].name} frame · LV ${e.level} · ${ARENAS[sel.arena].name}</span></div>
         <p class="brief-text">${sel.intro || ''}</p>
         ${mod ? `<div class="brief-mod"><b>${mod.name}</b>${mod.desc}</div>` : ''}
+        ${sel.id !== '1-1' ? `<div class="brief-haz">⚠ ${HAZARD_INFO[sel.arena]}</div>` : ''}
         <div class="brief-rw">
           <div><small>${first ? 'FIRST CLEAR' : 'REPLAY'}</small>${cr(Math.round(rw.credits * (first ? 1 : 0.4)))} <span class="xpv">+${Math.round(rw.xp * (first ? 1 : 0.5))} XP</span></div>
           ${drop ? `<div class="brief-drop ${P.owns(drop.id) ? 'got' : ''}" style="--rc:${RARITY[drop.rarity].color}"><small>${P.owns(drop.id) ? 'DROP CLAIMED' : 'GUARANTEED DROP'}</small><b>${drop.name}</b></div>` : ''}
@@ -308,6 +312,85 @@ export class UI {
       q.level = +e.target.value;
       this.showQuick();
       this.app.previewQuick();
+    });
+  }
+
+  // ---------------------------------------------------------------- gauntlet
+  showGauntlet() {
+    const P = this.P;
+    const best = P.data.record.bestGauntlet || 0;
+    this.set(`
+      ${this.topbar('GAUNTLET')}
+      <div class="q-panel gl">
+        <div class="gl-kicker">ENDLESS RUN</div>
+        <h2 class="gl-title">THE GAUNTLET</h2>
+        <p class="gl-text">One frame. One hull. Fight an endless ladder of random opponents in random arenas. Your hull damage carries from fight to fight, so every hit you take matters.</p>
+        <ul class="gl-rules">
+          <li><b>Salvage</b> one of three upgrades after every win. They stack for the whole run.</li>
+          <li><b>20% hull</b> is patched between floors. The rest stays broken.</li>
+          <li>Every <b>5th floor</b> is a Warden: bigger, tougher, double payout.</li>
+          <li>Credits and XP bank when the run ends, win or lose.</li>
+        </ul>
+        <div class="gl-best"><small>BEST RUN</small><b>${best ? `FLOOR ${best}` : '—'}</b><span>${P.data.record.gauntletRuns || 0} runs</span></div>
+        <div class="q-go"><div class="brief-me"><small>YOUR FRAME</small><b>${CHASSIS[P.data.selected].name}</b><button class="link" data-act="garage">change ▸</button></div>
+        <button class="btn big" data-act="gauntletgo">BEGIN RUN</button></div>
+      </div>`, 'quick gauntlet');
+  }
+
+  showBoons(run, choices) {
+    const e = run.enemy;
+    const cards = choices.map((b) => `
+      <button class="boon" data-act="boon" data-id="${b.id}">
+        <span class="boon-tag">${b.tag}</span><b>${b.name}</b><p>${b.desc}</p>
+        ${run.boons.includes(b.id) ? `<em>owned ×${run.boons.filter((x) => x === b.id).length}</em>` : ''}
+      </button>`).join('');
+    const owned = run.boons.length ? run.boons.map((id) => `<i>${BOON_BY_ID[id].name}</i>`).join('') : '<i class="none">none yet</i>';
+    const mod = e.modifier ? MODIFIERS[e.modifier] : null;
+    this.set(`
+      <div class="boon-wrap">
+        <div class="boon-head">
+          <div class="boon-floor">FLOOR ${run.cleared} CLEARED</div>
+          <div class="boon-bank">banked ${cr(run.credits)} · <span class="xpv">${run.xp} XP</span></div>
+        </div>
+        <h2>SALVAGE ONE UPGRADE</h2>
+        <div class="boons">${cards}</div>
+        <div class="boon-status">
+          <div class="boon-hull"><small>HULL</small><div class="xp big"><i style="width:${Math.round(run.hpPct * 100)}%"></i></div><b>${Math.round(run.hpPct * 100)}%</b></div>
+          <div class="boon-owned"><small>INSTALLED</small>${owned}</div>
+        </div>
+        <div class="boon-next">
+          <div><small>NEXT · FLOOR ${run.floor}${e.boss ? ' · WARDEN' : ''}</small><b>${e.name}</b><span>${CHASSIS[e.chassis].name} frame · LV ${e.level} · ${ARENAS[e.arena].name}${mod ? ` · <em>${mod.name}</em>` : ''}</span></div>
+          <button class="btn ghost" data-act="cashout">END RUN &amp; BANK</button>
+        </div>
+      </div>`, 'boonscreen');
+  }
+
+  showGauntletEnd(r, run) {
+    const pct0 = (r.levelsGained ? 0 : r.xpBefore / xpForLevel(r.levelBefore)) * 100;
+    const pct1 = (r.xpAfter / r.xpNeed) * 100;
+    const boons = run.boons.length ? run.boons.map((id) => `<i>${BOON_BY_ID[id].name}</i>`).join('') : '';
+    this.set(`
+      <div class="res-card">
+        <div class="res-title">${r.newBest ? 'NEW RECORD' : 'RUN OVER'}</div>
+        <div class="res-sub">THE GAUNTLET</div>
+        <div class="gl-floor"><b>${r.floors}</b><span>FLOOR${r.floors === 1 ? '' : 'S'} CLEARED</span>${r.best && !r.newBest ? `<em>best: ${r.best}</em>` : ''}</div>
+        <div class="res-grid">
+          <div><small>CREDITS</small><b>${cr(r.credits)}</b></div>
+          <div><small>EXPERIENCE</small><b>+${r.xp} XP</b></div>
+          <div><small>UPGRADES</small><b>${run.boons.length}</b></div>
+        </div>
+        ${boons ? `<div class="boon-owned end">${boons}</div>` : ''}
+        <div class="res-xp"><span>PILOT LV ${r.level}</span><div class="xp big"><i style="width:${pct0}%" data-to="${pct1}"></i></div><span>${r.level >= MAX_LEVEL ? 'MAX' : `${r.xpAfter} / ${r.xpNeed}`}</span></div>
+        ${r.levelsGained ? `<div class="res-lvl">LEVEL UP! <b>+${r.perkPoints} PERK POINT${r.perkPoints > 1 ? 'S' : ''}</b>${r.newPaints.length ? ` · paint unlocked: ${r.newPaints.join(', ')}` : ''}</div>` : ''}
+        <div class="res-btns">
+          <button class="btn big" data-act="gauntletgo">RUN AGAIN</button>
+          <button class="btn ghost" data-act="garage">GARAGE</button>
+          <button class="btn ghost" data-act="menu">MENU</button>
+        </div>
+      </div>`, `results ${r.newBest ? 'win' : 'lose'}`);
+    requestAnimationFrame(() => {
+      const bar = this.layer.querySelector('.res-xp i');
+      if (bar) setTimeout(() => (bar.style.width = bar.dataset.to + '%'), 350);
     });
   }
 
@@ -377,6 +460,8 @@ export class UI {
           <p><b>Blocking</b> stops damage but drains your <b>Guard</b>. When it empties your shield shatters and you are stunned. A charged heavy (hold K) is unblockable.</p>
           <p><b>Parry</b> by tapping block the instant before a hit lands: no guard loss, the attacker is stunned, and projectiles are reflected back.</p>
           <p><b>Combos</b>: lights chain J›J›J. On hit, cancel lights into a heavy or launcher, heavies into specials, and specials into your Overdrive. Launch (S+K), then press W to chase into the air.</p>
+          <p><b>Armor Purge</b> (U): blow off a layer of plating as a shrapnel burst. It knocks the opponent away and frees you from any combo, stun or juggle. Each of your four layers lost makes you faster and hit harder, but you take more damage for the rest of the round. Plating is refitted between rounds.</p>
+          <p><b>Clashes</b>: strikes that meet head-on cancel out; the heavier one ploughs through. <b>Arena hazards</b> are announced before they hit: watch the floor.</p>
           <p><b>Energy</b> fuels specials and refills over time. <b>Overdrive</b> fills as you deal and take damage — unleash it with O.</p>
           <p>Gamepad: stick move · A jump · X light · Y heavy · B special · RB block · RT dash · LB overdrive. Touch controls appear automatically on phones and tablets.</p>
         </div>
@@ -408,8 +493,8 @@ export class UI {
         <button class="btn ghost" data-act="pausemoves">MOVE LIST</button>
         <button class="btn ghost" data-act="pausehelp">HOW TO PLAY</button>
         <button class="btn ghost" data-act="pausesettings">SETTINGS</button>
-        <button class="btn ghost" data-act="restart">RESTART BOUT</button>
-        <button class="btn ghost danger" data-act="quit">FORFEIT</button>
+        ${this.app.lastCfg?.gauntlet ? '' : '<button class="btn ghost" data-act="restart">RESTART BOUT</button>'}
+        <button class="btn ghost danger" data-act="quit">${this.app.lastCfg?.gauntlet ? 'END RUN' : 'FORFEIT'}</button>
       </div>`, 'narrow');
   }
 
@@ -426,6 +511,10 @@ export class UI {
       case 'menu': a.play(this.screen === 'title' ? 'uiSelect' : 'uiBack'); app.go('menu'); break;
       case 'campaign': a.play('uiSelect'); app.go('campaign'); break;
       case 'quick': a.play('uiSelect'); app.go('quick'); break;
+      case 'gauntlet': a.play('uiSelect'); app.go('gauntlet'); break;
+      case 'gauntletgo': a.play('fight'); app.startGauntlet(); break;
+      case 'boon': a.play('uiBuy'); app.pickBoon(d.id); break;
+      case 'cashout': a.play('uiSelect'); app.finishGauntlet(); break;
       case 'garage': a.play('uiSelect'); app.go('garage'); break;
       case 'help': a.play('uiSelect'); this.showHelp(); break;
       case 'settings': a.play('uiSelect'); this.showSettings(); break;

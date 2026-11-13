@@ -1,7 +1,7 @@
 # APEX CHASSIS
 
 A 2.5D robot fighting game for the browser: four modular combat frames, 35 mods, 24 perks,
-a 16-bout campaign across four arenas, and a full garage.
+a 16-bout campaign across four arenas, an endless Gauntlet mode, and a full garage.
 
 Everything on screen and everything you hear is generated at runtime — the robot models, animation,
 arenas, particle effects, shaders, sound effects and music. There are no image, model or audio assets.
@@ -36,10 +36,11 @@ Needs a browser with WebGL 2 (current Chrome, Edge, Firefox or Safari).
 | Special · neutral / forward / down | `L` · direction + `L` · `S` + `L` | `B` |
 | Block (tap just before impact to parry) | `I` | `RB` |
 | Dash (hold back to back-dash) | `Space` | `RT` |
+| Armor Purge | `U` | `LT` |
 | Overdrive (full meter) | `O` | `LB` |
 | Pause | `Esc` | Start |
 
-Arrow keys and `Z` / `X` / `C` / `V` / `F` work as alternates. On phones and tablets an on-screen stick and
+Arrow keys and `Z` / `X` / `C` / `V` / `F` / `Q` work as alternates. On phones and tablets an on-screen stick and
 buttons appear automatically.
 
 ## How fights work
@@ -51,6 +52,13 @@ buttons appear automatically.
 - **Combos.** Lights chain into each other. On hit, lights cancel into heavies and launchers, heavies into
   specials, specials into the Overdrive. Launch, then jump to continue in the air. Damage scales down the
   longer a combo runs.
+- **Armor Purge.** Every frame carries four layers of plating. Purging one blows it off as a shrapnel
+  burst that knocks the opponent away and frees you from any combo, stun or juggle. Each layer lost makes
+  you faster and hit harder, but you take more damage for the rest of the round. A guard break costs a
+  layer too. The plates physically fly off the robot, and plating is refitted between rounds.
+- **Clashes.** Strikes that meet head-on cancel out; the heavier one ploughs through.
+- **Arena hazards.** Each arena has a telegraphed event: a slag pour in the Foundry, a rail overload on the
+  Skydeck, a slowing cryo vent in the Vault, and a gravity flux on the Orbital Crown.
 - **Rounds.** Best of three, 60 seconds each (the first campaign bout is a single round).
 
 ## The frames
@@ -75,6 +83,9 @@ and a cinematic Overdrive.
 - **Perks** — three branches (Offense, Defense, Systems) of eight perks, bought with a point per pilot
   level. Respec is free.
 - **Paint** — twelve schemes that unlock with pilot level.
+- **Gauntlet** — an endless run of random opponents. Hull damage carries between fights (20% is patched
+  per floor), every fifth floor is a tougher Warden, and after each win you salvage one of three upgrades
+  that stack for the run. Credits and XP bank when the run ends.
 - **Quick Battle** — any opponent frame, arena and difficulty.
 
 Progress is saved in the browser's local storage.
@@ -100,6 +111,7 @@ src/
     fighter.js         fighter state machine, cancels, damage resolution
     fight.js           match flow, hit detection, projectiles, camera
     ai.js              opponent AI
+    hazards.js         per-arena hazard events
     arenas.js          the four arenas and the garage hangar
   ui/                  HUD, menus, stylesheet
 ```

@@ -108,6 +108,27 @@ export class AIController {
     c.mx = now < this.moveUntil ? this.moveDir : 0;
     if (f.dead || !F.live) return;
 
+    // armour purge as a combo breaker / escape from a guard break
+    if (f.plates > 0 && f.purgeCd <= 0 && L > 0.15) {
+      const caught = (f.state === 'hitstun' || f.state === 'launched') && f.comboHits >= (L > 0.6 ? 3 : 4);
+      const broken = f.state === 'stunned' && d < 3.2;
+      const dying = f.hp / f.hpMax < 0.3 && f.plates >= 3 && (f.state === 'hitstun' || f.state === 'launched');
+      if ((caught || broken || dying) && chance(dt * (2 + L * 9))) {
+        f.press('purge');
+        return;
+      }
+    }
+    // step out of telegraphed arena hazards
+    const dz = F.danger;
+    if (dz && f.neutral && f.x > dz.x0 - 0.3 && f.x < dz.x1 + 0.3 && L > 0.2 && now >= this.moveUntil) {
+      const mid = (dz.x0 + dz.x1) / 2;
+      let dir = f.x >= mid ? 1 : -1;
+      if ((dir > 0 && dz.x1 > 8) || (dir < 0 && dz.x0 < -8)) dir = -dir; // don't run into the wall
+      this.moveDir = dir;
+      this.moveUntil = now + 0.35;
+      if (f.dashCd <= 0 && chance(0.3 + L * 0.4)) { c.mx = dir; f.press('dash'); }
+    }
+
     // ------------------------------------------------ react to enemy attacks
     const fm = foe.state === 'attack' ? foe.move : null;
     if (fm && fm !== this.seenMove) {

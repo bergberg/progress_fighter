@@ -226,6 +226,38 @@ export const SECTORS = [
 export const STAGES = SECTORS.flatMap((s) => s.stages.map((st) => ({ ...st, sector: s.id, arena: s.arena })));
 export const STAGE_BY_ID = Object.fromEntries(STAGES.map((s) => [s.id, s]));
 
+// ---------------------------------------------------------------------------
+// Gauntlet: run-only salvage. `unique` boons can be taken once; the rest stack.
+const boon = (id, name, tag, desc, stats = {}, fx = {}, o = {}) => ({ id, name, tag, desc, stats, fx, ...o });
+export const BOONS = [
+  boon('welds', 'Reinforced Welds', 'HULL', 'Maximum hull +14%.', { hp: 0.14 }),
+  boon('hotrods', 'Hot Rods', 'POWER', 'All damage +10%.', { atk: 0.1 }),
+  boon('coolant', 'Coolant Loop', 'ENERGY', 'Energy regeneration +25%.', { energyRegen: 0.25 }),
+  boon('mounts', 'Shock Mounts', 'ARMOR', 'Damage taken -9%.', { def: 0.09 }),
+  boon('nitro', 'Nitro Lines', 'SPEED', 'Movement speed +10%.', { speed: 0.1 }),
+  boon('cap', 'Salvaged Capacitor', 'ENERGY', 'Maximum energy +30.', { energyMax: 30 }),
+  boon('tap', 'Overdrive Tap', 'METER', 'Overdrive builds 30% faster.', { meter: 0.3 }),
+  boon('ballast', 'Counterweight', 'GUARD', 'Guard +25%.', { guard: 0.25 }),
+  boon('optics', 'Killer Optics', 'CRIT', 'Critical chance +10%.', { crit: 0.1 }),
+  boon('leech', 'Leech Wire', 'SUSTAIN', 'Heal for 6% of the damage you deal.', {}, { lifesteal: 0.06 }),
+  boon('cinder', 'Cinder Coating', 'BURN', 'Strikes ignite the target for 5 damage over 3 seconds.', {}, { burn: 5 }),
+  boon('edge', "Executioner's Edge", 'FINISH', '+25% damage against targets below 35% hull.', {}, { execute: 0.25 }),
+  boon('jets', 'Jury-Rigged Jets', 'MOBILITY', 'Grants a second jump in mid-air.', {}, { doubleJump: true }, { unique: true }),
+  boon('mesh', 'Reactive Mesh', 'GUARD', 'Blocking takes no chip damage and jolts attackers.', {}, { noChip: true, thorns: 3 }, { unique: true }),
+  boon('wind', 'Emergency Weld', 'SUSTAIN', 'Once per fight, dropping below 25% hull repairs 12%.', {}, { secondWind: 0.12 }, { unique: true }),
+  boon('opener', 'Ambush Protocol', 'POWER', 'The first hit of every fight deals +50% damage.', {}, { firstStrike: 0.5 }, { unique: true }),
+  boon('overflow', 'Primed Reactor', 'METER', 'Start every fight with 50% Overdrive.', {}, { startMeter: 50 }, { unique: true }),
+  boon('barrier', 'Scrap Barrier', 'HULL', 'Start every fight with a 20 point energy barrier.', {}, { barrier: 20 }),
+  boon('patch', 'Field Repair', 'REPAIR', 'Restore 45% hull right now.', {}, {}, { instant: 'repair' }),
+];
+export const BOON_BY_ID = Object.fromEntries(BOONS.map((b) => [b.id, b]));
+
+export const GAUNTLET_NAMES = ['SCRAPJAW', 'HEX-9', 'BRIMSTONE', 'LULLABY', 'KILOTON', 'ORCHID', 'DEADBOLT', 'MANTIS', 'GALLOWS', 'PRISM', 'HALCYON', 'RIVETHEAD', 'OMEN', 'CINDER', 'VERTIGO', 'TALON', 'MONOLITH', 'ECHO', 'JUDGE', 'NOVA'];
+
+export function gauntletRewards(level, boss) {
+  return { credits: Math.round((45 + 12 * level) * (boss ? 2 : 1)), xp: Math.round((28 + 8 * level) * (boss ? 2 : 1)) };
+}
+
 export const MAX_LEVEL = 30;
 export function xpForLevel(level) {
   // xp required to go from `level` to `level + 1`
@@ -248,6 +280,7 @@ export const CONTROLS = [
   ['S + L', 'Special · down'],
   ['I', 'Block (tap just before impact to PARRY)'],
   ['SPACE', 'Dash (hold back to back-dash)'],
+  ['U', 'PURGE a layer of armor (burst that breaks combos)'],
   ['O', 'OVERDRIVE (full meter)'],
   ['ESC', 'Pause'],
 ];

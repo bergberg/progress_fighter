@@ -11,11 +11,12 @@ const KEYMAP = {
   KeyI: 'block', KeyV: 'block', ShiftLeft: 'block', ShiftRight: 'block',
   Space: 'dash',
   KeyO: 'overdrive', KeyF: 'overdrive',
+  KeyU: 'purge', KeyQ: 'purge',
   Escape: 'pause', KeyP: 'pause',
   Enter: 'confirm',
 };
 // standard gamepad mapping
-const PADMAP = { 0: 'jump', 2: 'light', 3: 'heavy', 1: 'special', 5: 'block', 4: 'overdrive', 7: 'dash', 6: 'block', 9: 'pause', 12: 'jump', 13: 'down', 14: 'left', 15: 'right' };
+const PADMAP = { 0: 'jump', 2: 'light', 3: 'heavy', 1: 'special', 5: 'block', 4: 'overdrive', 7: 'dash', 6: 'purge', 9: 'pause', 12: 'jump', 13: 'down', 14: 'left', 15: 'right' };
 
 export class Input {
   constructor() {

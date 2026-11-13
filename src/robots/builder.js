@@ -63,6 +63,7 @@ export class Rig {
     }
     for (const n of BONES) this.list.push(this.bones[n]);
     this.anchors = {};
+    this.plates = {}; // bone -> armour meshes that can be blown off
     this.dynamic = {}; // animated sub-objects (blades, halos ...)
     this.materials = null;
     this.height = d.hipY + d.pelvis + d.spine + d.chest + (d.headH || 0.3);
@@ -290,6 +291,15 @@ export function makeMaterials(paint) {
   return M;
 }
 
+const PLATE_MATS = new Set(['armor', 'armor2', 'trim', 'glow']);
+/** armour layers in the order they are purged */
+export const PLATE_LAYERS = [
+  { id: 'arms', name: 'ARM PLATING', bones: ['armL', 'foreL', 'handL', 'armR', 'foreR', 'handR'] },
+  { id: 'legs', name: 'LEG PLATING', bones: ['thighL', 'shinL', 'footL', 'thighR', 'shinR', 'footR'] },
+  { id: 'head', name: 'HELM & SKIRT', bones: ['head', 'hips'] },
+  { id: 'core', name: 'CORE PLATING', bones: ['chest', 'spine'] },
+];
+
 // ---------------------------------------------------------------------------
 // Part builder: collects transformed geometry per bone/material and merges it.
 // ---------------------------------------------------------------------------
@@ -382,6 +392,8 @@ export class RobotBuilder {
       mesh.castShadow = !emissive;
       mesh.receiveShadow = !emissive;
       rig.bones[bone].add(mesh);
+      // armour shell (as opposed to the inner skeleton) can be purged in combat
+      if (PLATE_MATS.has(mat)) (rig.plates[bone] ||= []).push(mesh);
       if (!emissive || mat === 'glow') (ghostParts[bone] ||= []).push(merged);
     }
     // merged per-bone geometry for after-image ghosts

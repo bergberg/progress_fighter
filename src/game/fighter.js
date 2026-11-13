@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { buildRobot, disposeRig } from '../robots/chassis.js';
-import { Ghost } from '../robots/builder.js';
+import { Ghost, PLATE_LAYERS } from '../robots/builder.js';
 import { Animator } from '../robots/anim.js';
 import { getMoveset } from '../robots/moveset.js';
 import { Trail, Shield } from '../engine/fx.js';
@@ -97,6 +97,10 @@ export class Fighter {
     this.burnT = 0;
     this.flashT = 0;
     this.firstStrikeReady = true;
+    this.shed = 0; // armour layers purged this round
+    this.purgeCd = 0;
+    this.chillT = 0;
+    for (const list of Object.values(this.rig.plates)) for (const m of list) m.visible = true;
     this.armorBroken = false;
     this.windUsed = false;
     this.hidden = false;
@@ -111,6 +115,57 @@ export class Fighter {
 
   get foe() {
     return this.F.fighters[1 - this.idx];
+  }
+  get plates() {
+    return PLATE_LAYERS.length - this.shed;
+  }
+  /** stripped frames are lighter: faster with every purged layer (and slowed by cryo fog) */
+  get speedMul() {
+    return (1 + 0.06 * this.shed) * (this.chillT > 0 ? 0.6 : 1);
+  }
+
+  /**
+   * Blow off the next armour layer. A voluntary purge bursts outward as shrapnel and frees the
+   * fighter from whatever it was caught in; a forced one (guard break, KO) just loses the plating.
+   */
+  purge(voluntary = true, force = 1, silent = false) {
+    if (this.shed >= PLATE_LAYERS.length) return false;
+    if (voluntary) {
+      if (this.purgeCd > 0 || this.dead || !this.F.live) return false;
+      const st = this.state;
+      if (st === 'down' || st === 'getup' || st === 'intro' || st === 'victory' || st === 'defeat') return false;
+      if (st === 'attack' && this.move && this.move.type === 'overdrive') return false;
+    }
+    const layer = PLATE_LAYERS[this.shed];
+    this.shed++;
+    this.rig.root.updateMatrixWorld(true);
+    for (const bone of layer.bones) {
+      for (const m of this.rig.plates[bone] || []) {
+        if (!m.visible) continue;
+        this.F.spawnDebris(m, this, force);
+        m.visible = false;
+      }
+    }
+    this.F.onPurge(this, layer, voluntary, silent);
+    if (voluntary) {
+      this.purgeCd = 1.4;
+      this.invulnT = Math.max(this.invulnT, 0.45);
+      this.comboHits = 0;
+      this.comboDmg = 0;
+      this.juggle = 0;
+      this.F.onComboEnd(this);
+      this.vx = 0;
+      this.glowBoost = 3;
+      if (this.grounded) {
+        this.setState('idle');
+        this.play('idle', 0.12);
+      } else {
+        this.vy = Math.max(this.vy, 3);
+        this.setState('jump');
+        this.play('fall', 0.12);
+      }
+    }
+    return true;
   }
   get grounded() {
     return this.y <= 0.001;
@@ -255,7 +310,7 @@ export class Fighter {
     this.dashDir = dir;
     this.setState('dash');
     this.dashT = back ? 0.24 : 0.22;
-    this.vx = dir * (back ? 11.5 : 14) * (0.8 + this.stats.speed / 18);
+    this.vx = dir * (back ? 11.5 : 14) * (0.8 + this.stats.speed / 18) * (1 + 0.04 * this.shed) * (this.chillT > 0 ? 0.7 : 1);
     if (air) {
       this.vy = 2;
       this.airDashed = true;
@@ -294,6 +349,13 @@ export class Fighter {
     this.invulnT -= dt;
     this.ghostTimer -= dt;
     this.guardLock -= dt;
+    this.purgeCd -= dt;
+    this.chillT -= dt;
+    if (this.buf === 'purge') {
+      this.buf = null;
+      this.bufT = 0;
+      this.purge(true);
+    }
     if (this.bufT > 0) {
       this.bufT -= dt;
       if (this.bufT <= 0) this.buf = null;
@@ -302,7 +364,7 @@ export class Fighter {
     // resources
     if (!this.dead && live) {
       const regenMul = F.energyMul;
-      if (!(this.state === 'attack' && this.move && this.move.cost)) this.energy = Math.min(s.energyMax, this.energy + s.energyRegen * regenMul * dt);
+      if (!(this.state === 'attack' && this.move && this.move.cost)) this.energy = Math.min(s.energyMax, this.energy + s.energyRegen * regenMul * (1 + 0.12 * this.shed) * (this.chillT > 0 ? 0 : 1) * dt);
       if (this.state !== 'block' && this.state !== 'blockstun' && this.state !== 'stunned' && this.guardLock <= 0) {
         this.guard = Math.min(s.guard, this.guard + s.guard * 0.16 * (1 + (this.fx.guardRegen || 0)) * dt);
       }
@@ -334,9 +396,9 @@ export class Fighter {
         }
         if (c.mx !== 0) {
           const fwd = c.mx === this.facing;
-          this.vx = c.mx * s.speed * (fwd ? 1 : 0.78);
+          this.vx = c.mx * s.speed * this.speedMul * (fwd ? 1 : 0.78);
           this.state = 'walk';
-          this.animator.speed = s.speed / 3.4;
+          this.animator.speed = (s.speed * this.speedMul) / 3.4;
           this.animator.play(fwd ? this.anims.walkF : this.anims.walkB, 0.12, false);
         } else {
           this.vx = damp(this.vx, 0, 22, dt);
@@ -389,7 +451,7 @@ export class Fighter {
         break;
       }
       case 'jump': {
-        this.vx = damp(this.vx, c.mx * s.speed * 0.9, 3, dt);
+        this.vx = damp(this.vx, c.mx * s.speed * this.speedMul * 0.9, 3, dt);
         if (this.vy < 0) this.animator.play(this.anims.fall, 0.18, false);
         if (live && this.buf && this.tryAction(this.buf)) break;
         break;
@@ -691,6 +753,7 @@ export class Fighter {
     if (a.juggle && this.airborne) dmg *= 1 + a.juggle;
     if (a.punish && this.vulnerableState) dmg *= 1 + a.punish;
     if (a.momentum) dmg *= 1 + Math.min(0.2, this.comboHits * a.momentum);
+    dmg *= 1 + 0.07 * (att.shed || 0); // limiters come off with the plating
 
     const blocking = (this.state === 'block' || this.state === 'blockstun') && dir === -this.facing;
     const unblockable = hit.unblockable || charged;
@@ -759,6 +822,7 @@ export class Fighter {
     const decay = a.comboScale ? 0.06 : 0.1;
     dmg *= Math.max(minScale, 1 - Math.max(0, n - 1) * decay);
     dmg /= this.stats.def;
+    dmg *= 1 + 0.1 * this.shed; // exposed frame
     if (this.fx.lastDef && this.hp / this.hpMax < 0.25) dmg *= 1 - this.fx.lastDef;
 
     const armored = (this.hasArmor || (this.modArmor && !this.armorBroken && hit.level < 3)) && type !== 'overdrive' && !(blocking && unblockable);
@@ -802,6 +866,7 @@ export class Fighter {
       this.hp = 0;
       this.dead = true;
       this.hidden = false;
+      while (this.shed < PLATE_LAYERS.length) this.purge(false, 2.4, true); // the wreck sheds everything
       this.juggle = 0;
       this.vx = (dir * Math.max(7, (hit.kbx ?? 4) * 1.2));
       this.vy = Math.max(9, hit.kby || 0);
@@ -854,6 +919,7 @@ export class Fighter {
     this.guard = this.stats.guard * 0.5;
     this.guardLock = 0;
     this.armorBroken = true;
+    this.purge(false, 1.3); // a shattered guard takes a layer of plating with it
     this.setState('stunned', 1.5 * (1 - (this.fx.breakResist || 0)));
     this.vx = dir * 3;
     this.play('stunned', 0.08);
@@ -904,6 +970,14 @@ export class Fighter {
     this.flashT = Math.max(0, this.flashT - (realDt ?? dt) * 11);
     const f = this.flashT * this.flashT * 0.22;
     for (const m of M.flashable) m.emissive.setRGB(f, f, f);
+    if (this.shed && !this.dead) {
+      // exposed frame runs hot
+      const h = this.shed * 0.022 * (1 + Math.sin(time * 5) * 0.25);
+      M.frame.emissive.r += M.glowColor.r * h;
+      M.frame.emissive.g += M.glowColor.g * h;
+      M.frame.emissive.b += M.glowColor.b * h;
+      if (this.shed >= PLATE_LAYERS.length && Math.abs(this.vx) > 2.5 && !this.hidden) this.ghostEvery(0.1, 0.2);
+    }
 
     // chassis specific dynamics
     const dyn = rig.dynamic;
