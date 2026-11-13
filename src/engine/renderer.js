@@ -13,6 +13,18 @@ export const QUALITY = {
   ultra: { label: 'Ultra', pixelRatio: 2.0, msaa: 4, shadows: true, shadowSize: 4096, bloom: true, reflections: true, particles: 1 },
 };
 
+export const SANE_GLSL = /* glsl */ `
+  // Guard against NaN / Inf / runaway highlights: one bad pixel would otherwise be smeared across
+  // the whole frame by the bloom blur and tone-map to black.
+  vec3 sane(vec3 c) {
+    if (!(c.r >= 0.0)) c.r = 0.0; // false for NaN as well as negatives
+    if (!(c.g >= 0.0)) c.g = 0.0;
+    if (!(c.b >= 0.0)) c.b = 0.0;
+    c = min(c, vec3(10.0)); // +Inf and runaway specular highlights
+    return c;
+  }
+`;
+
 /** Renders the scene into an MSAA HDR target, then hands the resolved image to the composer chain. */
 class SceneMSAAPass extends Pass {
   constructor(samples) {
@@ -24,7 +36,7 @@ class SceneMSAAPass extends Pass {
     this.copyMat = new THREE.ShaderMaterial({
       uniforms: { tDiffuse: { value: null } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
-      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ gl_FragColor = texture2D(tDiffuse, vUv); }`,
+      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; ${SANE_GLSL} void main(){ gl_FragColor = vec4(sane(texture2D(tDiffuse, vUv).rgb), 1.0); }`,
       depthTest: false,
       depthWrite: false,
     });
@@ -87,6 +99,7 @@ const FinalShader = {
     uniform vec2 uRes, uCenter;
     uniform vec3 uImpactA, uImpactB, uFlashColor, uShadowTint, uHighTint;
     varying vec2 vUv;
+    ${SANE_GLSL}
     float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
     void main() {
       vec2 uv = vUv;
@@ -102,7 +115,7 @@ const FinalShader = {
         c.g += texture2D(tDiffuse, uv - o).g;
         c.b += texture2D(tDiffuse, uv - o - dir * ab).b;
       }
-      c /= 6.0;
+      c = sane(c / 6.0);
       float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
       // split-tone grade
       c *= mix(uShadowTint, uHighTint, smoothstep(0.0, 0.9, lum));
@@ -111,15 +124,15 @@ const FinalShader = {
       c = max(c, 0.0);
       // anime style impact frame: brutal two tone posterise with a hot rim
       if (uImpact > 0.001) {
-        float l2 = smoothstep(0.16, 0.2, lum);
-        float hot = smoothstep(1.2, 2.2, lum);
-        vec3 imp = mix(uImpactA, uImpactB, l2);
-        imp = mix(imp, uImpactA, hot * 0.0);
+        vec3 mid = mix(uImpactA, uImpactB, 0.26);
+        vec3 imp = mix(uImpactA + uImpactB * 0.12, mid, smoothstep(0.015, 0.06, lum));
+        imp = mix(imp, uImpactB, smoothstep(0.3, 0.6, lum));
+        imp = mix(imp, vec3(1.0), smoothstep(1.0, 2.0, lum));
         // speed streaks
         float ang = atan(dir.y, dir.x);
         float streak = smoothstep(0.55, 1.0, hash(vec2(floor(ang * 60.0), floor(uTime * 40.0)))) * smoothstep(0.25, 0.7, d);
-        imp = mix(imp, uImpactB, streak * 0.8);
-        c = mix(c, imp * 1.4, uImpact);
+        imp = mix(imp, uImpactB, streak * 0.35);
+        c = mix(c, imp * 1.1, uImpact * 0.85);
       }
       float vig = smoothstep(0.35, 1.25, d * 1.15);
       c *= 1.0 - uVignette * vig;
@@ -127,7 +140,7 @@ const FinalShader = {
       c += g * uGrain * (0.35 + lum);
       c = mix(c, uFlashColor, uFlash);
       c *= 1.0 - uFade;
-      gl_FragColor = vec4(max(c, 0.0), 1.0);
+      gl_FragColor = vec4(sane(c), 1.0);
     }
   `,
 };

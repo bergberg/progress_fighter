@@ -31,7 +31,9 @@ const ReflShader = {
       c += texture2D(tDiffuse, uv - vec2(r, r) * 1.6).rgb * 0.07;
       c += texture2D(tDiffuse, uv + vec2(-r, r) * 1.6).rgb * 0.07;
       c += texture2D(tDiffuse, uv - vec2(-r, r) * 1.6).rgb * 0.07;
-      gl_FragColor = vec4(min(c, vec3(6.0)) * color, 1.0);
+      c = max(min(c, vec3(6.0)), vec3(0.0));
+      if (!(c.r >= 0.0 && c.g >= 0.0 && c.b >= 0.0)) c = vec3(0.0);
+      gl_FragColor = vec4(c * color, 1.0);
     }`,
 };
 
@@ -116,7 +118,7 @@ class Arena {
       transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false,
       vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
       fragmentShader: `precision highp float; uniform vec3 uColor; uniform float uTime; varying vec2 vUv; varying vec3 vN; varying vec3 vV; ${NOISE}
-        void main(){ float f = pow(abs(dot(normalize(vN), normalize(vV))), 2.2); float n = 0.6 + 0.4 * vnoise(vec2(vUv.x * 14.0, uTime * 0.3));
+        void main(){ float f = pow(clamp(abs(dot(normalize(vN), normalize(vV))), 0.0001, 1.0), 2.2); float n = 0.6 + 0.4 * vnoise(vec2(vUv.x * 14.0, uTime * 0.3));
           float a = f * smoothstep(0.0, 0.5, vUv.y) * smoothstep(1.0, 0.75, vUv.y) * n * 0.22; gl_FragColor = vec4(uColor * a, a); }`,
     });
     const m = new THREE.Mesh(geo, mat);
@@ -884,7 +886,7 @@ function orbital(R) {
         float day = smoothstep(-0.15, 0.5, dot(n, uSun));
         // city lights on the night side
         float lights = step(0.78, vnoise(vec2(lon * 90.0, lat * 90.0))) * smoothstep(0.5, 0.62, bands) * (1.0 - day);
-        float fres = pow(1.0 - max(0.0, dot(n, normalize(vV))), 2.6);
+        float fres = pow(clamp(1.0 - dot(n, normalize(vV)), 0.0001, 1.0), 2.6);
         vec3 atm = vec3(0.3, 0.6, 1.4) * fres * (0.25 + day * 1.4);
         gl_FragColor = vec4(col * day * 0.4 + vec3(1.6, 1.0, 0.4) * lights * 0.5 + atm * 0.3, 1.0);
       }`,
@@ -898,7 +900,7 @@ function orbital(R) {
   const halo = new THREE.Mesh(new THREE.SphereGeometry(124, 48, 32), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
     vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `precision highp float; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(max(0.0, dot(normalize(vN), -normalize(vV))), 3.0); gl_FragColor = vec4(vec3(0.25, 0.55, 1.3) * f * 0.4, f); }`,
+    fragmentShader: `precision highp float; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(clamp(dot(normalize(vN), -normalize(vV)), 0.0001, 1.0), 3.0); gl_FragColor = vec4(vec3(0.25, 0.55, 1.3) * f * 0.4, f); }`,
   }));
   halo.position.copy(planet.position);
   s.add(halo);

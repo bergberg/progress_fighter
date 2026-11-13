@@ -275,17 +275,18 @@ export class Trail {
           vec3 col;
           if (uStyle < 0.5) {
             // blade swoosh: razor bright leading edge at the tip, soft body
-            float edge = pow(side, 5.0);
-            float body = pow(side, 1.3) * 0.5;
+            float sd = clamp(side, 0.0001, 1.0);
+            float edge = pow(sd, 5.0);
+            float body = pow(sd, 1.3) * 0.5;
             float n = fbm(vec2(age * 7.0 - uTime * 2.0, side * 5.0));
-            a = (edge * 1.4 + body * (0.55 + n * 0.8)) * pow(1.0 - age, 1.6);
+            a = (edge * 1.4 + body * (0.55 + n * 0.8)) * pow(clamp(1.0 - age, 0.0, 1.0), 1.6);
             col = mix(uColor2, uColor, side) * (1.0 + edge * 2.0);
             col = mix(col, vec3(1.0), edge * (1.0 - age) * 0.7);
           } else {
             // energy scarf: flowing banded ribbon
             float n = fbm(vec2(age * 5.0 - uTime * 1.5, side * 2.5 + uTime * 0.3));
             float band = smoothstep(0.0, 0.25, side) * smoothstep(1.0, 0.75, side);
-            a = band * (0.35 + n * 0.9) * pow(1.0 - age, 1.2) * smoothstep(0.0, 0.06, age);
+            a = band * (0.35 + n * 0.9) * pow(clamp(1.0 - age, 0.0, 1.0), 1.2) * smoothstep(0.0, 0.06, age);
             col = mix(uColor, uColor2, age) * (0.8 + n);
           }
           a *= uAlpha;
@@ -396,7 +397,7 @@ export class Shield {
           vec2 hg = hexGrid(huv);
           float line = smoothstep(0.07, 0.0, hg.x);
           float cell = hg.y;
-          float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+          float fres = pow(clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.0);
           // boundary fade of the patch
           float edge = smoothstep(0.0, 0.16, uv.x) * smoothstep(1.0, 0.84, uv.x) * smoothstep(0.0, 0.14, uv.y) * smoothstep(1.0, 0.86, uv.y);
           // scan wave + per cell flicker
@@ -507,11 +508,11 @@ export class FX {
             float ang = atan(q.y, q.x);
             float n = fbm(vec2(ang * 3.0 + uSeed, uT * 3.0 + uSeed));
             float r = 0.93 - uWidth;
-            float w = uWidth * (1.0 - uT * 0.65) * (0.55 + n * 0.9);
+            float w = max(0.004, uWidth * (1.0 - uT * 0.65) * (0.55 + n * 0.9));
             float ring = smoothstep(w, 0.0, abs(d - r)) ;
             float inner = smoothstep(r, r - 0.5, d) * smoothstep(0.0, r, d) * uFill;
             float streak = pow(max(0.0, sin(ang * 24.0 + n * 9.0)), 6.0) * smoothstep(r, r - 0.35, d) * smoothstep(r - 0.45, r - 0.1, d) * 0.5;
-            float a = (ring * 1.5 + inner * 0.35 + streak * ring * 0.0 + streak * 0.6) * pow(1.0 - uT, 1.4) * uAlpha;
+            float a = (ring * 1.5 + inner * 0.35 + streak * 0.6) * pow(clamp(1.0 - uT, 0.0, 1.0), 1.4) * uAlpha;
             vec3 col = mix(uColor, vec3(1.0), ring * 0.55 * (1.0 - uT));
             gl_FragColor = vec4(col * a, a);
           }`,
@@ -618,17 +619,17 @@ export class FX {
             float sweep = clamp(uT * 2.6, 0.0, 1.0);          // leading edge travels quickly
             float lead = smoothstep(sweep, sweep - 0.02, s);
             float tail = smoothstep(max(0.0, uT * 1.7 - 0.5), max(0.0, uT * 1.7 - 0.5) + 0.5, s);
-            float prof = sin(s * 3.14159);
-            float thick = uThick * pow(prof, 0.7);
+            float prof = max(0.0, sin(s * 3.14159));
+            float thick = uThick * pow(max(prof, 0.0001), 0.7);
             float outer = 0.95;
             float n = fbm(vec2(s * 9.0 + uSeed, d * 6.0 - uT * 5.0));
             float inner = outer - thick * (0.75 + n * 0.5);
             float edge = smoothstep(outer, outer - 0.035, d) * smoothstep(outer - 0.11, outer - 0.03, d);
-            float body = smoothstep(inner, inner + thick * 0.9, d) * smoothstep(outer, outer - 0.02, d);
+            float body = smoothstep(inner, inner + thick * 0.9 + 0.0005, d) * smoothstep(outer, outer - 0.02, d);
             float streak = pow(fbm(vec2(s * 30.0 + uSeed, d * 2.0)), 2.0);
-            float a = (edge * 2.4 + body * body * (0.35 + streak * 1.3)) * lead * tail * (1.0 - smoothstep(0.6, 1.0, uT));
+            float a = (edge * 1.5 + body * body * (0.22 + streak * 0.9)) * lead * tail * (1.0 - smoothstep(0.6, 1.0, uT));
             vec3 col = mix(uColor2, uColor, body);
-            col = mix(col, vec3(1.0), edge * 0.8);
+            col = mix(col, vec3(1.0), edge * 0.55);
             gl_FragColor = vec4(col * a, a);
           }`,
       });
@@ -656,7 +657,7 @@ export class FX {
             float n = fbm(vec2(vUv.x * 12.0 + uSeed, vUv.y * 5.0 - uTime * 9.0));
             float streak = pow(n, 2.0) * 2.4;
             float fadeY = smoothstep(1.0, 0.25, vUv.y) * smoothstep(0.0, 0.03, vUv.y);
-            float a = (0.25 + streak) * pow(f, 0.8) * fadeY * sin(clamp(uT, 0.0, 1.0) * 3.14159);
+            float a = (0.25 + streak) * pow(max(f, 0.0001), 0.8) * fadeY * max(0.0, sin(clamp(uT, 0.0, 1.0) * 3.14159));
             vec3 col = mix(uColor, vec3(1.0), streak * 0.35 * f);
             gl_FragColor = vec4(col * a * 1.2, a);
           }`,
@@ -683,10 +684,10 @@ export class FX {
           void main(){
             vec2 hg = hexGrid(vec2(vUv.x * 30.0, vUv.y * 9.0));
             float line = smoothstep(0.08, 0.0, hg.x);
-            float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.6);
+            float fres = pow(clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 1.6);
             float wave = smoothstep(0.25, 0.0, abs(vUv.y - (1.0 - uT * 1.3)));
             float flick = step(0.6, fract(hg.y * 9.0 + uTime * 3.0));
-            float a = (line * (0.5 + fres) + fres * 0.6 + wave * 0.9 + flick * 0.12) * pow(1.0 - uT, 1.2);
+            float a = (line * (0.5 + fres) + fres * 0.6 + wave * 0.9 + flick * 0.12) * pow(clamp(1.0 - uT, 0.0, 1.0), 1.2);
             vec3 col = mix(uColor, vec3(1.0), wave * 0.5);
             gl_FragColor = vec4(col * a * 1.4, a);
           }`,
@@ -1011,14 +1012,14 @@ export class FX {
   /** Generic strike impact. power 0..1.5 */
   impact(pos, color, power = 0.5, dirX = 1) {
     const p = Math.max(0.2, power);
-    this.flare(pos, { color, size: 1.3 + p * 2.0, life: 0.1 + p * 0.08, intensity: 1.7 });
-    this.glow(pos, { color, size: 0.7 + p * 1.3, life: 0.14, intensity: 1.1 });
-    this.ring(pos, { color, r0: 0.15, r1: 0.9 + p * 1.9, dur: 0.22 + p * 0.14, width: 0.16, tiltY: 0.9 * dirX });
+    this.flare(pos, { color, size: 1.1 + p * 1.5, life: 0.09 + p * 0.06, intensity: 1.2 });
+    this.glow(pos, { color, size: 0.6 + p * 1.0, life: 0.12, intensity: 0.7 });
+    this.ring(pos, { color, r0: 0.15, r1: 0.9 + p * 1.7, dur: 0.22 + p * 0.14, width: 0.1, tiltY: 0.9 * dirX, intensity: 0.8 });
     this.sparks(pos, { count: 8 + p * 22, color: 0xfff0c8, color2: color, speed: 6 + p * 9, dir: [dirX * 0.9, 0.35, 0], spread: 0.9, size: 0.03 + p * 0.02 });
     this.sparks(pos, { count: 4 + p * 8, color: 0xffb060, color2: 0xff4a10, speed: 3 + p * 3, gravity: 12, life: 0.8, size: 0.025 });
     this.light(pos, color, 16 + p * 34, 0.18 + p * 0.1);
     if (p > 0.75) {
-      this.ring(pos, { color: 0xffffff, r0: 0.3, r1: 2.6 + p * 1.6, dur: 0.3, width: 0.05, rot: rand(TAU) });
+      this.ring(pos, { color, r0: 0.3, r1: 2.4 + p * 1.4, dur: 0.3, width: 0.04, rot: rand(TAU), intensity: 0.7 });
       this.smoke(pos, { count: 3, size: 0.5, alpha: 0.25, speed: 2 });
     }
   }

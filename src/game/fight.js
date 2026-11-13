@@ -425,7 +425,7 @@ export class Fight {
       const col = fxKind === 'hit' ? 0xffc27a : att.color;
       this.fx.impact(pos, col, power * (res.type === 'armor' ? 0.5 : 1), dir);
       if (fxKind === 'slash') {
-        this.fx.slash(pos, { color: 0xffffff, color2: att.color, radius: 0.9 + power * 1.3, a0: -1.2, a1: 1.2, rot: rand(TAU), dur: 0.2, thick: 0.18 });
+        this.fx.slash(pos, { color: att.color, radius: 0.8 + power * 1.1, a0: -1.2, a1: 1.2, rot: rand(TAU), dur: 0.18, thick: 0.12, intensity: 1.0 });
       } else if (fxKind === 'shock') {
         for (let i = 0; i < 3 + lvl; i++) {
           this.fx.lightning(pos, v3(pos.x + rand(-1.3, 1.3) * (0.6 + power), pos.y + rand(-1.2, 1.4) * (0.6 + power)), { color: att.color, dur: 0.16, width: 0.06 });
@@ -548,7 +548,7 @@ export class Fight {
       fragmentShader: `precision highp float; uniform vec3 uColor; uniform float uTime; varying vec3 vN; varying vec3 vV; varying vec3 vP;
         float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719))) * 43758.5453); }
         void main(){
-          float f = abs(dot(normalize(vN), normalize(vV)));
+          float f = clamp(abs(dot(normalize(vN), normalize(vV))), 0.0001, 0.9999);
           float bands = sin(vP.y * 22.0 + uTime * 16.0) * sin(vP.x * 17.0 - uTime * 11.0) * sin(vP.z * 19.0 + uTime * 13.0);
           float a = pow(f, 1.5) * 1.3 + pow(1.0 - f, 2.0) * 0.9 + smoothstep(0.35, 0.9, bands) * 1.2;
           vec3 col = mix(uColor, vec3(1.0), pow(f, 6.0) * 0.6);

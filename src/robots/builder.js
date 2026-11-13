@@ -412,7 +412,7 @@ export class Ghost {
       fragmentShader: /* glsl */ `
         uniform vec3 uColor; uniform float uAlpha; varying vec3 vN; varying vec3 vV;
         void main(){
-          float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+          float f = clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0001, 1.0);
           float a = (0.12 + pow(f, 1.6) * 1.6) * uAlpha;
           gl_FragColor = vec4(uColor * a * 2.2, a);
         }`,
