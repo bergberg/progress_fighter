@@ -9,11 +9,13 @@
   --line: rgba(130, 200, 255, 0.2);
   --display: 'Orbitron', 'Eurostile', 'Bank Gothic', 'Segoe UI', system-ui, sans-serif;
   --body: 'Rajdhani', 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--ink); font-family: var(--body); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; touch-action: none; }
 canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
-#ui { position: fixed; inset: 0; pointer-events: none; }
+/* the canvas runs edge to edge; all interface stays inside the device safe area */
+#ui { position: fixed; inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); pointer-events: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; text-align: inherit; }
 kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1px solid rgba(255, 255, 255, 0.35); border-bottom-width: 3px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); font: 700 0.85em var(--display); text-align: center; }
 .hidden { display: none !important; }
@@ -21,7 +23,7 @@ kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1
 
 /* =============================================================== HUD */
 .hud { position: absolute; inset: 0; pointer-events: none; }
-.hud-top { display: flex; justify-content: center; align-items: flex-start; gap: 1.1vw; padding: max(2vh, 10px) 3vw 0; }
+.hud-top { display: flex; justify-content: center; align-items: flex-start; gap: 1.1vw; padding: max(2vh, 10px) max(3vw, 16px) 0; }
 .pl { flex: 1; max-width: 44vw; --c: var(--acc); }
 .pl-head { display: flex; align-items: baseline; gap: 0.7em; margin: 0 0.8vw 0.4vh; }
 .p2 .pl-head { flex-direction: row-reverse; }
@@ -57,8 +59,8 @@ kbd { display: inline-block; min-width: 1.7em; padding: 0.05em 0.45em; border: 1
 .timer span { font: 900 clamp(20px, 2.8vw, 42px) var(--display); letter-spacing: -0.02em; text-shadow: 0 0 12px rgba(255, 255, 255, 0.5); }
 .timer.low span { color: var(--bad); animation: blink 0.5s steps(2) infinite; }
 
-.od { position: absolute; bottom: max(3.5vh, 14px); left: 3vw; width: clamp(150px, 25vw, 400px); --c: var(--acc); }
-.od.p2 { left: auto; right: 3vw; text-align: right; }
+.od { position: absolute; bottom: max(3.5vh, 14px); left: max(3vw, 16px); width: clamp(150px, 25vw, 400px); --c: var(--acc); }
+.od.p2 { left: auto; right: max(3vw, 16px); text-align: right; }
 .od-label { font: 800 italic clamp(9px, 0.9vw, 13px) var(--display); letter-spacing: 0.3em; color: var(--dim); margin-bottom: 4px; }
 .od-bar { position: relative; height: clamp(10px, 1.6vh, 16px); background: rgba(6, 8, 12, 0.85); transform: skewX(-20deg); border: 1px solid rgba(255, 255, 255, 0.25); overflow: hidden; }
 .od.p2 .od-bar { transform: skewX(20deg); }

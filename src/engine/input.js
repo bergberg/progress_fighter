@@ -71,7 +71,12 @@ export class Input {
   }
 
   pollGamepad() {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let pads = [];
+    try {
+      pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    } catch {
+      pads = []; // embedded frames may refuse the Gamepad API
+    }
     let gp = null;
     for (const p of pads) if (p && p.connected && p.mapping === 'standard') { gp = p; break; }
     if (!gp) for (const p of pads) if (p && p.connected) { gp = p; break; }

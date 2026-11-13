@@ -385,7 +385,7 @@ class App {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+function boot() {
   try {
     new App();
     window.__ready = true;
@@ -394,4 +394,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.__error = String(e.stack || e);
     document.getElementById('ui').innerHTML = `<div class="fatal"><h2>Could not start the renderer</h2><p>APEX CHASSIS needs WebGL 2. Try a recent version of Chrome, Edge, Firefox or Safari with hardware acceleration enabled.</p><pre>${String(e.message || e)}</pre></div>`;
   }
-});
+}
+if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', boot);
+else boot();
